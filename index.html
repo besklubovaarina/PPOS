@@ -5,1195 +5,200 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ППОС АлтГПУ - Автоматизация регистрации на конкурсы</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #bfdef3;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        /* Login Overlay */
-        .login-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-
-        .login-modal {
-            background: white;
-            border-radius: 30px;
-            padding: 50px;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: modalSlideIn 0.3s ease;
-            position: relative;
-        }
-
-        .login-close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            background: none;
-            border: none;
-            font-size: 32px;
-            cursor: pointer;
-            color: #6b7280;
-            transition: all 0.3s;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            z-index: 10;
-        }
-
-        .login-close:hover {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .login-modal h2 {
-            color: #033b7c;
-            font-size: 32px;
-            margin-bottom: 30px;
-            text-align: center;
-            font-weight: 700;
-        }
-
-        .login-modal label {
-            color: #163a6f;
-            font-size: 16px;
-            font-weight: 600;
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        .login-modal input {
-            width: 100%;
-            padding: 14px 18px;
-            border-radius: 12px;
-            border: 2px solid #163a6f;
-            font-size: 18px;
-            margin-bottom: 20px;
-            font-family: inherit;
-            transition: all 0.3s;
-        }
-
-        .login-modal input:focus {
-            outline: none;
-            border-color: #064591;
-            box-shadow: 0 0 0 3px rgba(6, 69, 145, 0.1);
-        }
-
-        .login-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #064591, #033b7c);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 16px;
-            font-size: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            margin-bottom: 15px;
-        }
-
-        .login-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .register-link {
-            text-align: center;
-            color: #064591;
-            cursor: pointer;
-            font-size: 16px;
-            text-decoration: underline;
-            transition: all 0.3s;
-        }
-
-        .register-link:hover {
-            color: #033b7c;
-        }
-
-        .error-message {
-            color: #dc2626;
-            font-size: 14px;
-            margin-bottom: 15px;
-            text-align: center;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        /* Header */
-        .header {
-            background: #033b7c;
-            border-radius: 60px;
-            padding: 60px;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: flex-start;
-            min-height: 500px;
-        }
-
-        .header-content {
-            position: relative;
-            z-index: 10;
-            flex: 1;
-            max-width: 65%;
-        }
-
-        .logo-icon {
-            width: 120px;
-            height: 120px;
-            margin-bottom: 30px;
-            object-fit: contain;
-        }
-
-        .header h1 {
-            color: white;
-            font-size: 52px;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            font-weight: 700;
-            line-height: 1.1;
-        }
-
-        .header-subtitle {
-            color: #d4e0f3;
-            font-size: 20px;
-            margin-bottom: 30px;
-            text-transform: uppercase;
-            line-height: 1.4;
-            font-weight: 500;
-        }
-
-        .header-buttons {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .btn-vk {
-            background: white;
-            border: 2px solid #163a6f;
-            border-radius: 50px;
-            padding: 16px 36px;
-            color: #163a6f;
-            font-size: 20px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-block;
-        }
-
-        .btn-vk:hover {
-            background: #f0f0f0;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .btn-chairman {
-            border: 2px solid white;
-            border-radius: 50px;
-            padding: 16px 36px;
-            color: white;
-            font-size: 20px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-block;
-        }
-
-        .btn-chairman:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .header-note {
-            color: #8fa8cc;
-            font-size: 18px;
-            margin-bottom: 40px;
-            line-height: 1.4;
-        }
-
-        .chairman-info {
-            margin-top: 10px;
-        }
-
-        .chairman-name {
-            font-size: 32px;
-            margin-bottom: 5px;
-            font-weight: 700;
-            background: linear-gradient(to bottom, #FFFFFF, #BFDEF3);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .chairman-title {
-            color: white;
-            font-size: 20px;
-            font-weight: 400;
-        }
-
-        .header-decoration {
-            position: absolute;
-            right: -100px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 50%;
-            height: 120%;
-            pointer-events: none;
-            z-index: 5;
-        }
-
-        .arc-bg {
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 700px;
-            height: 700px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(16, 143, 229, 0.3) 0%, rgba(3, 59, 124, 0.1) 50%, transparent 70%);
-            z-index: 1;
-        }
-
-        .person-icon {
-            position: absolute;
-            right: 80px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 500px;
-            height: 500px;
-            z-index: 2;
-            object-fit: contain;
-            opacity: 0.95;
-        }
-
-        /* Navigation */
-        .nav {
-            background: white;
-            border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            margin-bottom: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 20px;
-            flex-wrap: wrap;
-        }
-
-        .nav-buttons {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-            flex: 1;
-            justify-content: space-around;
-        }
-
-        .nav button {
-            color: #163a6f;
-            font-size: 20px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            padding: 15px 20px;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        .nav button:hover {
-            color: #064591;
-            text-decoration: underline;
-            transform: translateY(-1px);
-        }
-
-        .profile-btn {
-            background: white;
-            border: 2px solid #163a6f;
-            border-radius: 50px;
-            padding: 12px 28px;
-            color: #163a6f;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.3s;
-            font-weight: 500;
-            margin-left: 20px;
-        }
-
-        .profile-btn:hover {
-            background: #f5f8ff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .profile-avatar-img {
-            height: 45px;
-            width: 45px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #163a6f;
-            background: #e5f0ff;
-        }
-
-        .logout-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 8px 16px;
-            font-size: 14px;
-            cursor: pointer;
-            margin-left: 10px;
-            transition: all 0.3s;
-        }
-
-        .logout-btn:hover {
-            background: #dc2626;
-        }
-
-        .admin-badge {
-            background: #f59e0b;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            margin-left: 8px;
-        }
-
-        /* Sections */
-        .section {
-            background: white;
-            border-radius: 80px;
-            padding: 50px;
-            margin-bottom: 32px;
-        }
-
-        .section-blue {
-            background: #bfdef3;
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .section-title {
-            color: #033b7c;
-            font-size: 48px;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-
-        .section-title-dark {
-            color: #163a6f;
-        }
-
-        .edit-btn {
-            color: #033b7c;
-            font-size: 24px;
-            cursor: pointer;
-            text-decoration: underline;
-            background: none;
-            border: none;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .edit-btn:hover {
-            color: #064591;
-            text-decoration: none;
-        }
-
-        .restricted-access {
-            text-align: center;
-            padding: 60px 20px;
-            color: #163a6f;
-            font-size: 24px;
-            font-weight: 500;
-        }
-
-        .restricted-access .lock-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .login-prompt-btn {
-            background: linear-gradient(135deg, #064591, #033b7c);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 16px 40px;
-            font-size: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-top: 20px;
-            transition: all 0.3s;
-        }
-
-        .login-prompt-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        /* Grid */
-        .grid-7 {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 30px;
-        }
-
-        .grid-6 {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 30px;
-        }
-
-        .member-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-        }
-
-        .member-avatar {
-            border: 3px solid #163a6f;
-            border-radius: 50%;
-            width: 150px;
-            height: 150px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s;
-        }
-
-        .member-avatar:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .member-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
-        }
-
-        .member-avatar-placeholder {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #064591, #033b7c);
-            color: white;
-            font-size: 40px;
-            font-weight: 700;
-        }
-
-        .member-name {
-            color: #064591;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            line-height: 1.2;
-            background: linear-gradient(to bottom, #064591, #033b7c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            max-width: 150px;
-        }
-
-        .group-avatar {
-            border: 3px solid #163a6f;
-            border-radius: 50%;
-            width: 150px;
-            height: 150px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            position: relative;
-            transition: all 0.3s;
-        }
-
-        .group-avatar:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        .group-name {
-            font-size: 50px;
-            font-weight: 700;
-            background: linear-gradient(to bottom, #064591, #033b7c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .delete-btn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            padding: 5px;
-            cursor: pointer;
-            border: none;
-            transition: all 0.3s;
-            z-index: 10;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .delete-btn:hover {
-            background: #dc2626;
-            transform: scale(1.1);
-        }
-
-        .add-btn {
-            border: 3px solid #163a6f;
-            border-radius: 50%;
-            width: 150px;
-            height: 150px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 60px;
-            color: #163a6f;
-        }
-
-        .add-btn:hover {
-            background: #f0f4ff;
-            transform: scale(1.05);
-        }
-
-        .add-btn-dark {
-            background: linear-gradient(135deg, #064591, #033b7c);
-            color: white;
-        }
-
-        .add-btn-dark:hover {
-            opacity: 0.9;
-        }
-
-        /* Event Cards */
-        .event-card {
-            position: relative;
-            border-radius: 80px;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            margin-bottom: 24px;
-            transition: all 0.3s;
-        }
-
-        .event-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
-        }
-
-        .event-bg {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .event-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(73, 158, 243, 0.85), rgba(19, 77, 135, 0.85));
-        }
-
-        .event-content {
-            position: relative;
-            padding: 35px 40px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .event-info {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-            flex: 1;
-        }
-
-        .event-icon {
-            width: 100px;
-            height: 100px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .event-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .event-details h3 {
-            color: white;
-            font-size: 32px;
-            margin-bottom: 15px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            font-weight: 700;
-        }
-
-        .event-meta {
-            display: flex;
-            gap: 40px;
-        }
-
-        .event-meta-label {
-            color: #e5f0ff;
-            font-size: 18px;
-            margin-bottom: 5px;
-            font-weight: 600;
-        }
-
-        .event-meta-value {
-            color: #a9cbff;
-            font-size: 20px;
-            font-weight: 500;
-        }
-
-        .event-actions {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .btn-info {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid white;
-            border-radius: 50px;
-            padding: 12px 24px;
-            color: white;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .btn-info:hover {
-            background: rgba(255, 255, 255, 0.35);
-            transform: translateY(-2px);
-        }
-
-        .btn-enroll {
-            background: #064591;
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 16px 32px;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-        }
-
-        .btn-enroll:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .btn-enroll.active {
-            background: white;
-            color: #064591;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-
-        .btn-enroll.active:hover {
-            background: #f0f4ff;
-        }
-
-        .btn-add-event {
-            width: 100%;
-            background: linear-gradient(135deg, #064591, #033b7c);
-            color: white;
-            border: none;
-            border-radius: 80px;
-            padding: 35px;
-            font-size: 26px;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            font-weight: 600;
-            margin-top: 20px;
-        }
-
-        .btn-add-event:hover {
-            opacity: 0.95;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        /* Forms */
-        .form-container {
-            margin-top: 30px;
-            background: #e5f0ff;
-            padding: 30px;
-            border-radius: 20px;
-            border: 2px solid #163a6f;
-        }
-
-        .form-container h3 {
-            color: #033b7c;
-            font-size: 26px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 14px 18px;
-            border-radius: 12px;
-            border: 2px solid #163a6f;
-            font-size: 18px;
-            margin-bottom: 16px;
-            font-family: inherit;
-            transition: all 0.3s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #064591;
-            box-shadow: 0 0 0 3px rgba(6, 69, 145, 0.1);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 16px;
-            margin-top: 20px;
-        }
-
-        textarea.form-input {
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        .btn-submit {
-            background: #064591;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 14px 32px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            flex: 1;
-        }
-
-        .btn-submit:hover {
-            background: #033b7c;
-            transform: translateY(-2px);
-        }
-
-        .btn-cancel {
-            background: #d1d5db;
-            color: #374151;
-            border: none;
-            border-radius: 12px;
-            padding: 14px 32px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            flex: 1;
-        }
-
-        .btn-cancel:hover {
-            background: #9ca3af;
-            transform: translateY(-2px);
-        }
-
-        .file-input-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-            margin-bottom: 16px;
-        }
-
-        .file-input-wrapper input[type=file] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
-
-        .file-input-btn {
-            background: white;
-            border: 2px solid #163a6f;
-            border-radius: 12px;
-            padding: 14px 24px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-            color: #163a6f;
-            display: inline-block;
-        }
-
-        .file-input-btn:hover {
-            background: #f0f4ff;
-        }
-
-        /* Pending changes */
-        .pending-changes {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .pending-changes h4 {
-            color: #92400e;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-
-        .change-item {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .change-item .change-info {
-            font-size: 16px;
-            color: #163a6f;
-        }
-
-        .change-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-approve {
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .btn-approve:hover {
-            background: #059669;
-        }
-
-        .btn-reject {
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-
-        .btn-reject:hover {
-            background: #dc2626;
-        }
-
-        /* Modal */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            padding: 20px;
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 30px;
-            padding: 40px;
-            max-width: 700px;
-            width: 100%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: modalSlideIn 0.3s ease;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        @keyframes modalSlideIn {
-            from { transform: translateY(-30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 25px;
-        }
-
-        .modal-header h3 {
-            color: #033b7c;
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .modal-close {
-            color: #6b7280;
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-size: 36px;
-            transition: all 0.3s;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .modal-close:hover {
-            color: #374151;
-            background: #f3f4f6;
-        }
-
-        .modal-body {
-            color: #163a6f;
-            font-size: 20px;
-            line-height: 1.6;
-        }
-
-        .avatar-preview {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #163a6f;
-            margin: 20px auto;
-            display: block;
-            background: #e5f0ff;
-        }
-
-        .modal-large {
-            max-width: 600px;
-        }
-
-        .footer {
-            background: white;
-            border-radius: 80px;
-            padding: 50px;
-        }
-
-        .footer h3 {
-            color: #13377d;
-            font-size: 32px;
-            margin-bottom: 25px;
-            font-weight: 700;
-        }
-
-        .footer p {
-            color: #064591;
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: 500;
-            background: linear-gradient(to bottom, #064591, #033b7c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .empty-state {
-            color: #163a6f;
-            font-size: 24px;
-            text-align: center;
-            padding: 60px 0;
-            font-weight: 500;
-            opacity: 0.7;
-        }
-
-        .star-svg {
-            width: 100px;
-            height: 100px;
-            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
-        }
-
-        .droplet-icon {
-            width: 80px;
-            height: 80px;
-            background: #108FE5;
-            border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
-            box-shadow: 0 4px 12px rgba(16, 143, 229, 0.4);
-        }
-
-        .notification {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #064591;
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            z-index: 200;
-            animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-        }
-
-        @keyframes slideInRight {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-
-        @media (max-width: 1200px) {
-            .grid-7 { grid-template-columns: repeat(4, 1fr); }
-            .grid-6 { grid-template-columns: repeat(3, 1fr); }
-            .header-content { max-width: 100%; }
-            .header-decoration { display: none; }
-        }
-
-        @media (max-width: 768px) {
-            .grid-7, .grid-6 { grid-template-columns: repeat(2, 1fr); gap: 20px; }
-            .section-title { font-size: 32px; }
-            .header h1 { font-size: 36px; }
-            .section { padding: 30px; border-radius: 40px; }
-            .event-content { flex-direction: column; align-items: flex-start; }
-            .header { padding: 30px; }
-            .nav-buttons { flex-direction: column; width: 100%; }
-            .profile-btn { margin-left: 0; margin-top: 10px; width: 100%; justify-content: center; }
-            .member-avatar, .group-avatar, .add-btn { width: 120px; height: 120px; }
-            .group-name { font-size: 36px; }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background-color: #bfdef3; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 40px 20px; }
+
+        .login-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px); }
+        .login-modal { background: white; border-radius: 30px; padding: 50px; max-width: 450px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalSlideIn 0.3s ease; position: relative; }
+        .login-close { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 32px; cursor: pointer; color: #6b7280; transition: all 0.3s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 10; }
+        .login-close:hover { background: #f3f4f6; color: #374151; }
+        .login-modal h2 { color: #033b7c; font-size: 32px; margin-bottom: 30px; text-align: center; font-weight: 700; }
+        .login-modal label { color: #163a6f; font-size: 16px; font-weight: 600; display: block; margin-bottom: 8px; }
+        .login-modal input { width: 100%; padding: 14px 18px; border-radius: 12px; border: 2px solid #163a6f; font-size: 18px; margin-bottom: 20px; font-family: inherit; transition: all 0.3s; }
+        .login-modal input:focus { outline: none; border-color: #064591; box-shadow: 0 0 0 3px rgba(6, 69, 145, 0.1); }
+        .login-btn { width: 100%; background: linear-gradient(135deg, #064591, #033b7c); color: white; border: none; border-radius: 12px; padding: 16px; font-size: 20px; cursor: pointer; font-weight: 600; transition: all 0.3s; margin-bottom: 15px; }
+        .login-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .error-message { color: #dc2626; font-size: 14px; margin-bottom: 15px; text-align: center; display: none; }
+        .error-message.show { display: block; }
+
+        .header { background: #033b7c; border-radius: 60px; padding: 60px; margin-bottom: 32px; position: relative; overflow: hidden; display: flex; align-items: flex-start; min-height: 500px; }
+        .header-content { position: relative; z-index: 10; flex: 1; max-width: 65%; }
+        .logo-icon { width: 120px; height: 120px; margin-bottom: 30px; object-fit: contain; }
+        .header h1 { color: white; font-size: 52px; margin-bottom: 20px; text-transform: uppercase; font-weight: 700; line-height: 1.1; }
+        .header-subtitle { color: #d4e0f3; font-size: 20px; margin-bottom: 30px; text-transform: uppercase; line-height: 1.4; font-weight: 500; }
+        .header-buttons { display: flex; gap: 20px; margin-bottom: 24px; }
+        .btn-vk { background: white; border: 2px solid #163a6f; border-radius: 50px; padding: 16px 36px; color: #163a6f; font-size: 20px; text-decoration: none; font-weight: 600; transition: all 0.3s; display: inline-block; }
+        .btn-vk:hover { background: #f0f0f0; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-chairman { border: 2px solid white; border-radius: 50px; padding: 16px 36px; color: white; font-size: 20px; text-decoration: none; font-weight: 600; transition: all 0.3s; display: inline-block; }
+        .btn-chairman:hover { background: rgba(255, 255, 255, 0.15); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .header-note { color: #8fa8cc; font-size: 18px; margin-bottom: 40px; line-height: 1.4; }
+        .chairman-name { font-size: 32px; margin-bottom: 5px; font-weight: 700; background: linear-gradient(to bottom, #FFFFFF, #BFDEF3); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .chairman-title { color: white; font-size: 20px; font-weight: 400; }
+        .header-decoration { position: absolute; right: -80px; top: 50%; transform: translateY(-50%); width: 45%; height: 110%; pointer-events: none; z-index: 5; }
+        .arc-bg { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 650px; height: 650px; border-radius: 50%; background: radial-gradient(circle, rgba(16, 143, 229, 0.3) 0%, rgba(3, 59, 124, 0.1) 50%, transparent 70%); z-index: 1; }
+
+        .nav { background: white; border-radius: 50px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); margin-bottom: 32px; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1; justify-content: space-around; }
+        .nav button { color: #163a6f; font-size: 20px; background: none; border: none; cursor: pointer; transition: all 0.3s; padding: 15px 20px; font-weight: 500; white-space: nowrap; }
+        .nav button:hover { color: #064591; text-decoration: underline; transform: translateY(-1px); }
+        .profile-btn { background: white; border: 2px solid #163a6f; border-radius: 50px; padding: 12px 28px; color: #163a6f; font-size: 18px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; font-weight: 500; margin-left: 20px; }
+        .profile-btn:hover { background: #f5f8ff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .profile-avatar-img { height: 45px; width: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #163a6f; background: #e5f0ff; }
+        .logout-btn { background: #ef4444; color: white; border: none; border-radius: 50px; padding: 8px 16px; font-size: 14px; cursor: pointer; margin-left: 10px; transition: all 0.3s; }
+        .logout-btn:hover { background: #dc2626; }
+        .admin-badge { background: #f59e0b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+
+        .section { background: white; border-radius: 80px; padding: 50px; margin-bottom: 32px; }
+        .section-blue { background: #bfdef3; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+        .section-title { color: #033b7c; font-size: 48px; text-transform: uppercase; font-weight: 700; }
+        .section-title-dark { color: #163a6f; }
+        .edit-btn { color: #033b7c; font-size: 24px; cursor: pointer; text-decoration: underline; background: none; border: none; transition: all 0.3s; font-weight: 500; }
+        .edit-btn:hover { color: #064591; text-decoration: none; }
+        .restricted-access { text-align: center; padding: 60px 20px; color: #163a6f; font-size: 24px; font-weight: 500; }
+        .restricted-access .lock-icon { font-size: 80px; margin-bottom: 20px; opacity: 0.5; }
+        .login-prompt-btn { background: linear-gradient(135deg, #064591, #033b7c); color: white; border: none; border-radius: 50px; padding: 16px 40px; font-size: 20px; cursor: pointer; font-weight: 600; margin-top: 20px; transition: all 0.3s; }
+        .login-prompt-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+
+        .grid-7 { display: grid; grid-template-columns: repeat(7, 1fr); gap: 30px; }
+        .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 30px; }
+        .member-card { display: flex; flex-direction: column; align-items: center; position: relative; }
+        .member-avatar { border: 3px solid #163a6f; border-radius: 50%; width: 150px; height: 150px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: white; position: relative; overflow: hidden; transition: all 0.3s; }
+        .member-avatar:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .member-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .member-name { color: #064591; text-align: center; font-size: 14px; font-weight: 600; line-height: 1.2; background: linear-gradient(to bottom, #064591, #033b7c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; max-width: 150px; }
+        .member-role { font-size: 11px; color: #7190bf; margin-top: 4px; text-align: center; }
+        .group-avatar { border: 3px solid #163a6f; border-radius: 50%; width: 150px; height: 150px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: white; position: relative; transition: all 0.3s; }
+        .group-avatar:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .group-name { font-size: 50px; font-weight: 700; background: linear-gradient(to bottom, #064591, #033b7c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .delete-btn { position: absolute; top: 8px; right: 8px; background: #ef4444; color: white; border-radius: 50%; padding: 5px; cursor: pointer; border: none; transition: all 0.3s; z-index: 10; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; }
+        .delete-btn:hover { background: #dc2626; transform: scale(1.1); }
+        .add-btn { border: 3px solid #163a6f; border-radius: 50%; width: 150px; height: 150px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; background: white; cursor: pointer; transition: all 0.3s; font-size: 60px; color: #163a6f; }
+        .add-btn:hover { background: #f0f4ff; transform: scale(1.05); }
+        .add-btn-dark { background: linear-gradient(135deg, #064591, #033b7c); color: white; }
+        .add-btn-dark:hover { opacity: 0.9; }
+
+        .event-card { position: relative; border-radius: 80px; overflow: hidden; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); margin-bottom: 24px; transition: all 0.3s; }
+        .event-card:hover { transform: translateY(-3px); box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15); }
+        .event-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .event-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(73, 158, 243, 0.85), rgba(19, 77, 135, 0.85)); }
+        .event-content { position: relative; padding: 35px 40px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; }
+        .event-info { display: flex; align-items: center; gap: 25px; flex: 1; }
+        .event-icon { width: 100px; height: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .event-icon img { width: 100%; height: 100%; object-fit: contain; }
+        .event-details h3 { color: white; font-size: 32px; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); font-weight: 700; }
+        .event-meta { display: flex; gap: 40px; }
+        .event-meta-label { color: #e5f0ff; font-size: 18px; margin-bottom: 5px; font-weight: 600; }
+        .event-meta-value { color: #a9cbff; font-size: 20px; font-weight: 500; }
+        .event-actions { display: flex; gap: 15px; align-items: center; }
+        .btn-info { background: rgba(255, 255, 255, 0.2); border: 2px solid white; border-radius: 50px; padding: 12px 24px; color: white; font-size: 18px; cursor: pointer; transition: all 0.3s; font-weight: 500; }
+        .btn-info:hover { background: rgba(255, 255, 255, 0.35); transform: translateY(-2px); }
+        .btn-certificate { background: #10b981; border: 2px solid #10b981; border-radius: 50px; padding: 12px 24px; color: white; font-size: 16px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-certificate:hover { background: #059669; transform: translateY(-2px); }
+        .btn-enroll { background: #064591; color: white; border: none; border-radius: 50px; padding: 16px 32px; font-size: 20px; cursor: pointer; transition: all 0.3s; font-weight: 600; }
+        .btn-enroll:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .btn-enroll.active { background: white; color: #064591; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .btn-enroll.active:hover { background: #f0f4ff; }
+        .btn-add-event { width: 100%; background: linear-gradient(135deg, #064591, #033b7c); color: white; border: none; border-radius: 80px; padding: 35px; font-size: 26px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 15px; font-weight: 600; margin-top: 20px; }
+        .btn-add-event:hover { opacity: 0.95; transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+
+        .form-container { margin-top: 30px; background: #e5f0ff; padding: 30px; border-radius: 20px; border: 2px solid #163a6f; }
+        .form-container h3 { color: #033b7c; font-size: 26px; margin-bottom: 20px; font-weight: 700; }
+        .form-input { width: 100%; padding: 14px 18px; border-radius: 12px; border: 2px solid #163a6f; font-size: 18px; margin-bottom: 16px; font-family: inherit; transition: all 0.3s; }
+        .form-input:focus { outline: none; border-color: #064591; box-shadow: 0 0 0 3px rgba(6, 69, 145, 0.1); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-actions { display: flex; gap: 16px; margin-top: 20px; }
+        textarea.form-input { resize: vertical; min-height: 100px; }
+        .btn-submit { background: #064591; color: white; border: none; border-radius: 12px; padding: 14px 32px; font-size: 18px; cursor: pointer; transition: all 0.3s; font-weight: 600; flex: 1; }
+        .btn-submit:hover { background: #033b7c; transform: translateY(-2px); }
+        .btn-cancel { background: #d1d5db; color: #374151; border: none; border-radius: 12px; padding: 14px 32px; font-size: 18px; cursor: pointer; transition: all 0.3s; font-weight: 600; flex: 1; }
+        .btn-cancel:hover { background: #9ca3af; transform: translateY(-2px); }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; margin-bottom: 16px; }
+        .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .file-input-btn { background: white; border: 2px solid #163a6f; border-radius: 12px; padding: 14px 24px; font-size: 18px; cursor: pointer; transition: all 0.3s; font-weight: 500; color: #163a6f; display: inline-block; }
+        .file-input-btn:hover { background: #f0f4ff; }
+
+        .pending-changes { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .change-item { background: white; border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .change-item .change-info { font-size: 16px; color: #163a6f; }
+        .change-actions { display: flex; gap: 10px; }
+        .btn-approve { background: #10b981; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-approve:hover { background: #059669; }
+        .btn-reject { background: #ef4444; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-reject:hover { background: #dc2626; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(5px); }
+        .modal-content { background: white; border-radius: 30px; padding: 40px; max-width: 700px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalSlideIn 0.3s ease; max-height: 90vh; overflow-y: auto; }
+        @keyframes modalSlideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+        .modal-header h3 { color: #033b7c; font-size: 28px; font-weight: 700; }
+        .modal-close { color: #6b7280; cursor: pointer; background: none; border: none; font-size: 36px; transition: all 0.3s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .modal-close:hover { color: #374151; background: #f3f4f6; }
+        .modal-body { color: #163a6f; font-size: 20px; line-height: 1.6; }
+        .avatar-preview { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #163a6f; margin: 20px auto; display: block; background: #e5f0ff; }
+        .modal-large { max-width: 650px; }
+
+        .certificate-preview { border: 5px solid #064591; padding: 40px; text-align: center; background: linear-gradient(135deg, #f9fafb, #e5f0ff); border-radius: 20px; margin: 20px 0; }
+        .certificate-preview h2 { color: #033b7c; font-size: 28px; margin-bottom: 20px; }
+        .certificate-preview p { font-size: 18px; line-height: 1.8; color: #163a6f; }
+        .certificate-stamp { font-size: 60px; opacity: 0.3; margin-top: 20px; }
+
+        .documents-section { margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 15px; }
+        .documents-section h4 { color: #033b7c; margin-bottom: 15px; }
+        .doc-card { display: flex; align-items: center; gap: 15px; padding: 15px; background: white; border-radius: 10px; margin-bottom: 10px; border: 1px solid #e5e7eb; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .tab { padding: 12px 24px; border-radius: 25px; cursor: pointer; font-weight: 600; transition: all 0.3s; border: 2px solid #d1d5db; background: white; color: #6b7280; font-size: 16px; }
+        .tab.active { background: #064591; color: white; border-color: #064591; }
+        .tab:hover { border-color: #064591; color: #064591; }
+        .tab.active:hover { color: white; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { background: #064591; color: white; padding: 15px; text-align: left; font-weight: 600; }
+        .data-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; }
+        .data-table tr:hover td { background: #f9fafb; }
+
+        .footer { background: white; border-radius: 80px; padding: 50px; }
+        .footer h3 { color: #13377d; font-size: 32px; margin-bottom: 25px; font-weight: 700; }
+        .footer p { color: #064591; font-size: 24px; margin-bottom: 10px; font-weight: 500; background: linear-gradient(to bottom, #064591, #033b7c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .empty-state { color: #163a6f; font-size: 24px; text-align: center; padding: 60px 0; font-weight: 500; opacity: 0.7; }
+        .star-svg { width: 100px; height: 100px; filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2)); }
+        .droplet-icon { width: 80px; height: 80px; background: #108FE5; border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%; box-shadow: 0 4px 12px rgba(16, 143, 229, 0.4); }
+        .notification { position: fixed; bottom: 30px; right: 30px; background: #064591; color: white; padding: 16px 24px; border-radius: 12px; font-size: 18px; font-weight: 600; z-index: 200; animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.5s forwards; box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        @keyframes slideInRight { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        @media (max-width: 1200px) { .grid-7 { grid-template-columns: repeat(4, 1fr); } .grid-6 { grid-template-columns: repeat(3, 1fr); } .header-content { max-width: 100%; } .header-decoration { display: none; } }
+        @media (max-width: 768px) { .grid-7, .grid-6 { grid-template-columns: repeat(2, 1fr); gap: 20px; } .section-title { font-size: 32px; } .header h1 { font-size: 36px; } .section { padding: 30px; border-radius: 40px; } .event-content { flex-direction: column; align-items: flex-start; } .header { padding: 30px; } .nav-buttons { flex-direction: column; width: 100%; } .profile-btn { margin-left: 0; margin-top: 10px; width: 100%; justify-content: center; } .member-avatar, .group-avatar, .add-btn { width: 120px; height: 120px; } .group-name { font-size: 36px; } }
     </style>
 </head>
 <body>
-    <!-- Login Overlay -->
     <div id="login-overlay" class="login-overlay" style="display: none;">
-        <div class="login-modal" id="login-form">
+        <div class="login-modal">
             <button class="login-close" onclick="closeLoginDialog()">✕</button>
-            <h2>Вход в личный кабинет</h2>
+            <h2>🔐 Вход в систему</h2>
             <div class="error-message" id="login-error"></div>
             <label>Логин</label>
             <input type="text" id="login-username" placeholder="Введите логин">
             <label>Пароль</label>
             <input type="password" id="login-password" placeholder="Введите пароль">
             <button class="login-btn" onclick="handleLogin()">Войти</button>
-            <p class="register-link" onclick="showRegisterForm()">Зарегистрироваться</p>
-        </div>
-
-        <div class="login-modal" id="register-form" style="display: none;">
-            <button class="login-close" onclick="closeLoginDialog()">✕</button>
-            <h2>Регистрация</h2>
-            <div class="error-message" id="register-error"></div>
-            <label>Логин</label>
-            <input type="text" id="reg-username" placeholder="Придумайте логин">
-            <label>Пароль</label>
-            <input type="password" id="reg-password" placeholder="Придумайте пароль">
-            <label>Подтверждение пароля</label>
-            <input type="password" id="reg-password-confirm" placeholder="Повторите пароль">
-            <button class="login-btn" onclick="handleRegister()">Зарегистрироваться</button>
-            <p class="register-link" onclick="showLoginForm()">Уже есть аккаунт? Войти</p>
         </div>
     </div>
 
     <div class="container">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <img src="images/logo-icon.png" alt="Лого" class="logo-icon" id="logo-icon">
+                <img src="logo-icon.png" alt="Лого" class="logo-icon">
                 <h1>Приветствуем на платформе ППОС "АлтГПУ"</h1>
                 <p class="header-subtitle">Здесь можно найти всю необходимую информацию по мероприятиям первичной профсоюзной организации "Алтайского государственного педагогического университета"</p>
                 <div class="header-buttons">
-                    <a href="https://vk.com/profcomaltspu?from=groups" target="_blank" rel="noopener noreferrer" class="btn-vk">Группа Вконтакте</a>
-                    <a href="https://vk.com/a.besklubova" target="_blank" rel="noopener noreferrer" class="btn-chairman">Написать председателю</a>
+                    <a href="https://vk.com/profcomaltspu?from=groups" target="_blank" class="btn-vk">Группа Вконтакте</a>
+                    <a href="https://vk.com/a.besklubova" target="_blank" class="btn-chairman">Написать председателю</a>
                 </div>
                 <p class="header-note">Если не нашли ответ, можно написать в сообщения группы Вконтакте или уточнить у председателя профбюро вашего института.</p>
                 <div class="chairman-info">
@@ -1203,34 +208,31 @@
             </div>
             <div class="header-decoration">
                 <div class="arc-bg"></div>
-                <img src="images/person-icon.png" alt="" class="person-icon" id="person-icon">
             </div>
         </header>
 
-        <!-- Navigation -->
         <nav class="nav">
-            <div class="nav-buttons" id="nav-buttons">
+            <div class="nav-buttons">
                 <button onclick="scrollToSection('allEvents')">Доступные мероприятия</button>
-                <button onclick="scrollToSection('group')" id="nav-group-btn" style="display: none;">Моя группа</button>
-                <button onclick="scrollToSection('myEvents')" id="nav-myevents-btn" style="display: none;">Мои мероприятия</button>
-                <button onclick="scrollToSection('instituteGroups')" id="nav-institute-btn" style="display: none;">Группы института</button>
-                <button onclick="scrollToSection('adminPanel')" id="nav-admin-btn" style="display: none;">Админ-панель</button>
+                <button onclick="scrollToSection('group')" id="nav-group-btn" style="display:none;">Моя группа</button>
+                <button onclick="scrollToSection('myEvents')" id="nav-myevents-btn" style="display:none;">Мои мероприятия</button>
+                <button onclick="scrollToSection('instituteGroups')" id="nav-institute-btn" style="display:none;">Группы института</button>
+                <button onclick="scrollToSection('adminPanel')" id="nav-admin-btn" style="display:none;">Админ-панель</button>
             </div>
-            <button class="profile-btn" id="profile-btn" onclick="openLoginOrProfile()">
-                <img src="images/default-avatar.png" alt="Аватар" class="profile-avatar-img" id="nav-avatar">
+            <button class="profile-btn" onclick="openLoginOrProfile()">
+                <img src="default-avatar.png" alt="Аватар" class="profile-avatar-img" id="nav-avatar">
                 <span id="nav-username">Войти</span>
             </button>
-            <button class="logout-btn" id="logout-btn" style="display: none;" onclick="handleLogout()">Выйти</button>
+            <button class="logout-btn" id="logout-btn" style="display:none;" onclick="handleLogout()">Выйти</button>
         </nav>
 
-        <!-- All Events Section -->
         <section id="allEvents" class="section">
             <div class="section-header">
-                <h2 class="section-title section-title-dark" style="flex: 1; text-align: center;">Доступные мероприятия</h2>
-                <button class="edit-btn" onclick="toggleEventsEdit()" id="events-edit-btn" style="display: none;">Редактировать</button>
+                <h2 class="section-title section-title-dark" style="flex:1;text-align:center;">Доступные мероприятия</h2>
+                <button class="edit-btn" onclick="toggleEventsEdit()" id="events-edit-btn" style="display:none;">Редактировать</button>
             </div>
             <div id="all-events-container"></div>
-            <div id="add-event-form" class="form-container" style="display: none;">
+            <div id="add-event-form" class="form-container" style="display:none;">
                 <h3>Добавить мероприятие</h3>
                 <input type="text" id="new-event-title" class="form-input" placeholder="Название мероприятия">
                 <div class="form-row">
@@ -1242,6 +244,7 @@
                     <option value="airplane">Самолет</option>
                     <option value="droplet">Капля</option>
                 </select>
+                <input type="number" id="new-event-max" class="form-input" placeholder="Максимум участников (0 - без ограничений)">
                 <textarea id="new-event-description" class="form-input" placeholder="Описание мероприятия" rows="4"></textarea>
                 <div class="form-actions">
                     <button onclick="addEvent()" class="btn-submit">Добавить</button>
@@ -1250,73 +253,53 @@
             </div>
         </section>
 
-        <!-- My Group Section -->
         <section id="group" class="section">
             <div class="section-header">
                 <h2 class="section-title">Моя группа</h2>
-                <button class="edit-btn" onclick="toggleGroupEdit()" id="group-edit-btn" style="display: none;">Редактировать</button>
+                <button class="edit-btn" onclick="toggleGroupEdit()" id="group-edit-btn" style="display:none;">Редактировать</button>
             </div>
-            <div id="group-content">
-                <div class="restricted-access">
-                    <div class="lock-icon">🔒</div>
-                    <p>Для просмотра группы необходимо войти в личный кабинет</p>
-                    <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                </div>
-            </div>
-            <div id="add-member-form" class="form-container" style="display: none;">
+            <div id="group-content"><div class="restricted-access"><div class="lock-icon">🔒</div><p>Для просмотра группы необходимо войти в личный кабинет</p><button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button></div></div>
+            <div id="add-member-form" class="form-container" style="display:none;">
                 <h3>Добавить участника</h3>
-                <div style="display: flex; gap: 16px;">
-                    <input type="text" id="new-member-name" class="form-input" placeholder="ФИО участника" style="margin-bottom: 0; flex: 1;">
-                    <button onclick="addMember()" class="btn-submit" style="flex: 0 0 auto;">Добавить</button>
-                    <button onclick="cancelAddMember()" class="btn-cancel" style="flex: 0 0 auto;">Отмена</button>
+                <div style="display:flex;gap:16px;">
+                    <input type="text" id="new-member-name" class="form-input" placeholder="ФИО участника" style="margin-bottom:0;flex:1;">
+                    <button onclick="addMember()" class="btn-submit" style="flex:0 0 auto;">Добавить</button>
+                    <button onclick="cancelAddMember()" class="btn-cancel" style="flex:0 0 auto;">Отмена</button>
                 </div>
             </div>
         </section>
 
-        <!-- My Events Section -->
         <section id="myEvents" class="section section-blue">
-            <h2 class="section-title section-title-dark" style="text-align: center; margin-bottom: 40px;">Мои мероприятия</h2>
-            <div id="my-events-content">
-                <div class="restricted-access">
-                    <div class="lock-icon">🔒</div>
-                    <p>Для просмотра ваших мероприятий необходимо войти в личный кабинет</p>
-                    <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                </div>
-            </div>
+            <h2 class="section-title section-title-dark" style="text-align:center;margin-bottom:40px;">Мои мероприятия</h2>
+            <div id="my-events-content"><div class="restricted-access"><div class="lock-icon">🔒</div><p>Для просмотра ваших мероприятий необходимо войти в личный кабинет</p><button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button></div></div>
         </section>
 
-        <!-- Institute Groups Section -->
         <section id="instituteGroups" class="section">
             <div class="section-header">
                 <h2 class="section-title">Группы института</h2>
-                <button class="edit-btn" onclick="toggleInstituteEdit()" id="institute-edit-btn" style="display: none;">Редактировать</button>
+                <button class="edit-btn" onclick="toggleInstituteEdit()" id="institute-edit-btn" style="display:none;">Редактировать</button>
             </div>
-            <div id="institute-groups-content">
-                <div class="restricted-access">
-                    <div class="lock-icon">🔒</div>
-                    <p>Для просмотра групп института необходимо войти в личный кабинет</p>
-                    <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                </div>
-            </div>
-            <div id="add-group-form" class="form-container" style="display: none;">
+            <div id="institute-groups-content"><div class="restricted-access"><div class="lock-icon">🔒</div><p>Для просмотра групп института необходимо войти в личный кабинет</p><button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button></div></div>
+            <div id="add-group-form" class="form-container" style="display:none;">
                 <h3>Добавить группу</h3>
-                <div style="display: flex; gap: 16px;">
-                    <input type="text" id="new-group-name" class="form-input" placeholder="Название группы" style="margin-bottom: 0; flex: 1;">
-                    <button onclick="addGroup()" class="btn-submit" style="flex: 0 0 auto;">Добавить</button>
-                    <button onclick="cancelAddGroup()" class="btn-cancel" style="flex: 0 0 auto;">Отмена</button>
+                <div style="display:flex;gap:16px;">
+                    <input type="text" id="new-group-name" class="form-input" placeholder="Название группы" style="margin-bottom:0;flex:1;">
+                    <button onclick="addGroup()" class="btn-submit" style="flex:0 0 auto;">Добавить</button>
+                    <button onclick="cancelAddGroup()" class="btn-cancel" style="flex:0 0 auto;">Отмена</button>
                 </div>
             </div>
         </section>
 
-        <!-- Admin Panel -->
-        <section id="adminPanel" class="section" style="display: none;">
-            <div class="section-header">
-                <h2 class="section-title">Админ-панель</h2>
+        <section id="adminPanel" class="section" style="display:none;">
+            <div class="section-header"><h2 class="section-title">Админ-панель</h2></div>
+            <div class="tabs">
+                <button class="tab active" onclick="switchAdminTab('changes')">Изменения профилей</button>
+                <button class="tab" onclick="switchAdminTab('users')">Пользователи</button>
+                <button class="tab" onclick="switchAdminTab('applications')">Заявки</button>
             </div>
             <div id="admin-content"></div>
         </section>
 
-        <!-- Footer -->
         <footer class="footer">
             <h3>По всем вопросам:</h3>
             <p>333 кабинет, Главный корпус</p>
@@ -1326,43 +309,86 @@
         </footer>
     </div>
 
-    <!-- Description Modal -->
-    <div id="description-modal" class="modal" style="display: none;" onclick="closeDescriptionModal()">
+    <div id="description-modal" class="modal" style="display:none;" onclick="closeDescriptionModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3>Описание мероприятия</h3>
-                <button class="modal-close" onclick="closeDescriptionModal()">✕</button>
-            </div>
+            <div class="modal-header"><h3>Описание мероприятия</h3><button class="modal-close" onclick="closeDescriptionModal()">✕</button></div>
             <div class="modal-body" id="modal-description"></div>
         </div>
     </div>
 
-    <!-- Profile Modal -->
-    <div id="profile-modal" class="modal" style="display: none;" onclick="closeProfileModal()">
+    <div id="certificate-modal" class="modal" style="display:none;" onclick="closeCertificateModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3>🏆 Сертификат участника</h3><button class="modal-close" onclick="closeCertificateModal()">✕</button></div>
+            <div class="modal-body" id="certificate-content"></div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal" style="display:none;" onclick="closeProfileModal()">
         <div class="modal-content modal-large" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3>Личный кабинет</h3>
-                <button class="modal-close" onclick="closeProfileModal()">✕</button>
-            </div>
-            <div class="modal-body" style="text-align: center;">
-                <img src="" alt="Предпросмотр аватара" class="avatar-preview" id="profile-avatar-preview">
-                <div style="margin: 20px 0;">
-                    <label style="font-size: 18px; color: #033b7c; font-weight: 600; display: block; margin-bottom: 10px;">Фамилия Имя Отчество:</label>
-                    <input type="text" id="profile-fullname-input" class="form-input" placeholder="ФИО" style="text-align: center;">
+            <div class="modal-header"><h3>Личный кабинет</h3><button class="modal-close" onclick="closeProfileModal()">✕</button></div>
+            <div class="modal-body" style="text-align:center;">
+                <img src="" alt="Аватар" class="avatar-preview" id="profile-avatar-preview">
+                <div style="margin:20px 0;">
+                    <label style="font-size:18px;color:#033b7c;font-weight:600;">ФИО:</label>
+                    <input type="text" id="profile-fullname-input" class="form-input" placeholder="ФИО" style="text-align:center;">
                 </div>
-                <div style="margin: 20px 0;">
-                    <label style="font-size: 18px; color: #033b7c; font-weight: 600; display: block; margin-bottom: 10px;">Номер группы:</label>
-                    <input type="text" id="profile-group-input" class="form-input" placeholder="Номер группы" style="text-align: center;">
+                <div style="margin:20px 0;">
+                    <label style="font-size:18px;color:#033b7c;font-weight:600;">Группа:</label>
+                    <input type="text" id="profile-group-input" class="form-input" placeholder="Номер группы" style="text-align:center;">
                 </div>
-                <div style="margin: 20px 0;">
-                    <label style="font-size: 18px; color: #033b7c; font-weight: 600; display: block; margin-bottom: 10px;">Фото профиля:</label>
+                <div style="margin:20px 0;">
+                    <label style="font-size:18px;color:#033b7c;font-weight:600;">Телефон:</label>
+                    <input type="text" id="profile-phone-input" class="form-input" placeholder="+7 (___) ___-__-__" style="text-align:center;">
+                </div>
+                <div style="margin:20px 0;">
+                    <label style="font-size:18px;color:#033b7c;font-weight:600;">Email:</label>
+                    <input type="email" id="profile-email-input" class="form-input" placeholder="email@example.com" style="text-align:center;">
+                </div>
+                <div style="margin:20px 0;">
+                    <label style="font-size:18px;color:#033b7c;font-weight:600;">Фото профиля:</label>
                     <div class="file-input-wrapper">
                         <span class="file-input-btn">📷 Выбрать фото</span>
                         <input type="file" id="profile-avatar-input" accept="image/*" onchange="handleAvatarUpload(event)">
                     </div>
-                    <p style="font-size: 14px; color: #7190bf; margin-top: 5px;">Изменения будут отправлены на одобрение администратору</p>
+                    <p style="font-size:14px;color:#7190bf;">Изменения отправляются на одобрение администратору</p>
                 </div>
-                <div class="form-actions" style="margin-top: 30px;">
+                <div class="documents-section">
+                    <h4>📄 Мои документы</h4>
+                    <div class="doc-card">
+                        <span style="font-size:24px;">📋</span>
+                        <div>
+                            <strong>Согласие на обработку данных</strong>
+                            <p style="font-size:14px;color:#7190bf;">Загрузите скан документа</p>
+                        </div>
+                        <div class="file-input-wrapper" style="margin:0;">
+                            <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">Загрузить</span>
+                            <input type="file" accept="image/*,.pdf" onchange="uploadDocument('consent', event)">
+                        </div>
+                    </div>
+                    <div class="doc-card">
+                        <span style="font-size:24px;">📝</span>
+                        <div>
+                            <strong>Заявление в бухгалтерию</strong>
+                            <p style="font-size:14px;color:#7190bf;">Загрузите скан документа</p>
+                        </div>
+                        <div class="file-input-wrapper" style="margin:0;">
+                            <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">Загрузить</span>
+                            <input type="file" accept="image/*,.pdf" onchange="uploadDocument('accounting', event)">
+                        </div>
+                    </div>
+                    <div class="doc-card">
+                        <span style="font-size:24px;">✍️</span>
+                        <div>
+                            <strong>Заявление на вступление</strong>
+                            <p style="font-size:14px;color:#7190bf;">Загрузите скан документа</p>
+                        </div>
+                        <div class="file-input-wrapper" style="margin:0;">
+                            <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">Загрузить</span>
+                            <input type="file" accept="image/*,.pdf" onchange="uploadDocument('join', event)">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top:30px;">
                     <button onclick="saveProfileChanges()" class="btn-submit">💾 Отправить изменения</button>
                     <button onclick="closeProfileModal()" class="btn-cancel">Отмена</button>
                 </div>
@@ -1371,828 +397,443 @@
     </div>
 
     <script>
-        // ============ AUTH SYSTEM ============
-        function getUsers() {
-            const saved = localStorage.getItem('platformUsers');
-            return saved ? JSON.parse(saved) : {};
-        }
+        // ============ STORAGE ============
+        function getUsers() { return JSON.parse(localStorage.getItem('platformUsers') || '{}'); }
+        function saveUsers(u) { localStorage.setItem('platformUsers', JSON.stringify(u)); }
+        function getPendingChanges() { return JSON.parse(localStorage.getItem('pendingChanges') || '[]'); }
+        function savePendingChanges(c) { localStorage.setItem('pendingChanges', JSON.stringify(c)); }
+        function getApplications() { return JSON.parse(localStorage.getItem('applications') || '[]'); }
+        function saveApplications(a) { localStorage.setItem('applications', JSON.stringify(a)); }
+        function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); }
+        function setCurrentUser(u) { u ? sessionStorage.setItem('currentUser', JSON.stringify(u)) : sessionStorage.removeItem('currentUser'); }
+        function isLoggedIn() { return getCurrentUser() !== null; }
+        function isAdmin() { const u = getCurrentUser(); return u && u.isAdmin; }
 
-        function saveUsers(users) {
-            localStorage.setItem('platformUsers', JSON.stringify(users));
-        }
-
-        function getPendingChanges() {
-            const saved = localStorage.getItem('pendingChanges');
-            return saved ? JSON.parse(saved) : [];
-        }
-
-        function savePendingChanges(changes) {
-            localStorage.setItem('pendingChanges', JSON.stringify(changes));
-        }
-
-        function getCurrentUser() {
-            const saved = sessionStorage.getItem('currentUser');
-            return saved ? JSON.parse(saved) : null;
-        }
-
-        function setCurrentUser(user) {
-            if (user) {
-                sessionStorage.setItem('currentUser', JSON.stringify(user));
-            } else {
-                sessionStorage.removeItem('currentUser');
-            }
-        }
-
-        function isLoggedIn() {
-            return getCurrentUser() !== null;
-        }
-
-        function isAdmin() {
-            const user = getCurrentUser();
-            return user && user.isAdmin;
-        }
-
+        // ============ USER DATA ============
         function initUsers() {
             const users = getUsers();
-            
             if (!users['admin']) {
                 users['admin'] = {
-                    username: 'admin',
-                    password: 'admin2025ppos',
-                    isAdmin: true,
-                    profileName: 'Администратор',
-                    avatarDataUrl: '',
-                    fullName: 'Администратор Системы',
-                    groupNumber: ''
+                    username: 'admin', password: 'admin2025ppos', isAdmin: true,
+                    profileName: 'Администратор', avatarDataUrl: '',
+                    fullName: 'Администратор', groupNumber: '', phone: '', email: '',
+                    role: 'Администратор', myEvents: [], documents: {}
                 };
             }
-            
-            const predefinedUsers = [
-                { username: 'rutts', password: 'rutts2025', fullName: 'Рутц Юлия Сергеевна', groupNumber: '3215д' },
-                { username: 'anufriev', password: 'anufriev2025', fullName: 'Ануфриев Артем Александрович', groupNumber: '3215д' },
-                { username: 'ganyukov', password: 'ganyukov2025', fullName: 'Ганюков Данил Андреевич', groupNumber: '3215д' },
-                { username: 'kodylev', password: 'kodylev2025', fullName: 'Кодылев Андрей Александрович', groupNumber: '3215д' },
-                { username: 'udovik', password: 'udovik2025', fullName: 'Удовик Анастасия Александровна', groupNumber: '3215д' }
+            const group3215d = [
+                { username: 'rutts', password: 'rutts2025', fullName: 'Рутц Юлия Сергеевна', role: 'Заместитель председателя' },
+                { username: 'anufriev', password: 'anufriev2025', fullName: 'Ануфриев Артем Александрович', role: 'Секретарь' },
+                { username: 'besklubova', password: 'besklubova2025', fullName: 'Бесклубова Арина Сергеевна', role: 'Председатель' },
+                { username: 'bulatov', password: 'bulatov2025', fullName: 'Булатов Иван Григорьевич', role: 'Студент' },
+                { username: 'ganyukov', password: 'ganyukov2025', fullName: 'Ганюков Данил Андреевич', role: 'Студент' },
+                { username: 'zaibert', password: 'zaibert2025', fullName: 'Зайберт Константин Валерьевич', role: 'Студент' },
+                { username: 'kodylev', password: 'kodylev2025', fullName: 'Кодылев Андрей Александрович', role: 'Студент' },
+                { username: 'kopasova', password: 'kopasova2025', fullName: 'Копасова Виктория Витальевна', role: 'Студент' },
+                { username: 'kosenkov', password: 'kosenkov2025', fullName: 'Косенков Денис Алексеевич', role: 'Студент' },
+                { username: 'kuznetsov', password: 'kuznetsov2025', fullName: 'Кузнецов Роман Романович', role: 'Студент' },
+                { username: 'kucherov', password: 'kucherov2025', fullName: 'Кучеров Денис Евгеньевич', role: 'Студент' },
+                { username: 'lisimenko', password: 'lisimenko2025', fullName: 'Лисименко Алексей Вячеславович', role: 'Студент' },
+                { username: 'lityagina', password: 'lityagina2025', fullName: 'Литягина Анастасия Михайловна', role: 'Студент' },
+                { username: 'lytar', password: 'lytar2025', fullName: 'Лытарь Алексей Александрович', role: 'Студент' },
+                { username: 'malets', password: 'malets2025', fullName: 'Малец Дмитрий Евгеньевич', role: 'Студент' },
+                { username: 'pinchuk', password: 'pinchuk2025', fullName: 'Пинчук Иван Сергеевич', role: 'Студент' },
+                { username: 'starkova', password: 'starkova2025', fullName: 'Старкова Елизавета Юрьевна', role: 'Студент' },
+                { username: 'udovik', password: 'udovik2025', fullName: 'Удовик Анастасия Александровна', role: 'Студент' },
+                { username: 'fotin', password: 'fotin2025', fullName: 'Фотин Михаил Константинович', role: 'Студент' },
+                { username: 'shinkorenko', password: 'shinkorenko2025', fullName: 'Шинкоренко Владислав Дмитриевич', role: 'Студент' },
+                { username: 'scherbakov', password: 'scherbakov2025', fullName: 'Щербаков Никита Сергеевич', role: 'Студент' },
+                { username: 'yakimov', password: 'yakimov2025', fullName: 'Якимов Михаил Александрович', role: 'Студент' }
             ];
-            
-            predefinedUsers.forEach(user => {
-                if (!users[user.username]) {
-                    users[user.username] = {
-                        username: user.username,
-                        password: user.password,
-                        isAdmin: false,
-                        profileName: user.fullName,
-                        avatarDataUrl: '',
-                        fullName: user.fullName,
-                        groupNumber: user.groupNumber,
-                        myEvents: []
+            group3215d.forEach(u => {
+                if (!users[u.username]) {
+                    users[u.username] = {
+                        username: u.username, password: u.password, isAdmin: false,
+                        profileName: u.fullName, avatarDataUrl: '',
+                        fullName: u.fullName, groupNumber: '3215д',
+                        phone: '', email: '', role: u.role,
+                        myEvents: [], documents: {}
                     };
                 }
             });
             
+            // Add past events for some users (for certificates)
+            const pastEvents = ['1', '2', '3'];
+            group3215d.forEach((u, i) => {
+                if (users[u.username] && users[u.username].myEvents.length === 0) {
+                    if (i < 5) users[u.username].myEvents = [pastEvents[i % 3]];
+                    if (i >= 5 && i < 10) users[u.username].myEvents = [pastEvents[(i+1) % 3]];
+                    if (i >= 10) users[u.username].myEvents = [pastEvents[(i+2) % 3]];
+                }
+            });
+            
             saveUsers(users);
         }
 
-        function showLoginDialog() {
-            document.getElementById('login-overlay').style.display = 'flex';
-            showLoginForm();
-        }
-
-        function closeLoginDialog() {
-            document.getElementById('login-overlay').style.display = 'none';
-        }
-
-        function showLoginForm() {
-            document.getElementById('login-form').style.display = 'block';
-            document.getElementById('register-form').style.display = 'none';
-            document.getElementById('login-error').classList.remove('show');
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-        }
-
-        function showRegisterForm() {
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('register-form').style.display = 'block';
-            document.getElementById('register-error').classList.remove('show');
-            document.getElementById('reg-username').value = '';
-            document.getElementById('reg-password').value = '';
-            document.getElementById('reg-password-confirm').value = '';
-        }
-
+        // ============ AUTH ============
+        function showLoginDialog() { document.getElementById('login-overlay').style.display = 'flex'; document.getElementById('login-error').classList.remove('show'); }
+        function closeLoginDialog() { document.getElementById('login-overlay').style.display = 'none'; }
         function handleLogin() {
-            const username = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value.trim();
-            const errorEl = document.getElementById('login-error');
-
-            if (!username || !password) {
-                errorEl.textContent = 'Заполните все поля';
-                errorEl.classList.add('show');
-                return;
-            }
-
+            const uname = document.getElementById('login-username').value.trim();
+            const pwd = document.getElementById('login-password').value.trim();
+            const err = document.getElementById('login-error');
+            if (!uname || !pwd) { err.textContent = 'Заполните все поля'; err.classList.add('show'); return; }
             const users = getUsers();
-            const user = users[username];
-
-            if (!user) {
-                errorEl.textContent = 'Пользователь не найден';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            if (user.password !== password) {
-                errorEl.textContent = 'Неверный пароль';
-                errorEl.classList.add('show');
-                return;
-            }
-
+            const user = users[uname];
+            if (!user) { err.textContent = 'Пользователь не найден'; err.classList.add('show'); return; }
+            if (user.password !== pwd) { err.textContent = 'Неверный пароль'; err.classList.add('show'); return; }
             setCurrentUser({
-                username: user.username,
-                isAdmin: user.isAdmin,
-                profileName: user.profileName || username,
-                avatarDataUrl: user.avatarDataUrl || '',
-                fullName: user.fullName || '',
-                groupNumber: user.groupNumber || '',
-                myEvents: user.myEvents || []
+                username: user.username, isAdmin: user.isAdmin,
+                profileName: user.profileName || uname, avatarDataUrl: user.avatarDataUrl || '',
+                fullName: user.fullName || '', groupNumber: user.groupNumber || '',
+                phone: user.phone || '', email: user.email || '', role: user.role || 'Студент',
+                myEvents: user.myEvents || [], documents: user.documents || {}
             });
-
             if (user.myEvents && user.myEvents.length > 0) {
-                data.events = data.events.map(event => ({
-                    ...event,
-                    isEnrolled: user.myEvents.includes(event.id)
-                }));
+                data.events = data.events.map(e => ({ ...e, isEnrolled: user.myEvents.includes(e.id) }));
                 saveData();
             }
-
             document.getElementById('login-overlay').style.display = 'none';
             updateUIForAuth();
-            showNotification('✅ Добро пожаловать, ' + (user.profileName || username) + '!');
+            showNotification('✅ Добро пожаловать, ' + (user.profileName || uname) + '!');
         }
-
-        function handleRegister() {
-            const username = document.getElementById('reg-username').value.trim();
-            const password = document.getElementById('reg-password').value.trim();
-            const passwordConfirm = document.getElementById('reg-password-confirm').value.trim();
-            const errorEl = document.getElementById('register-error');
-
-            if (!username || !password) {
-                errorEl.textContent = 'Заполните все поля';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            if (username.length < 3) {
-                errorEl.textContent = 'Логин должен быть не менее 3 символов';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            if (password.length < 6) {
-                errorEl.textContent = 'Пароль должен быть не менее 6 символов';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            if (password !== passwordConfirm) {
-                errorEl.textContent = 'Пароли не совпадают';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            const users = getUsers();
-            if (users[username]) {
-                errorEl.textContent = 'Пользователь с таким логином уже существует';
-                errorEl.classList.add('show');
-                return;
-            }
-
-            users[username] = {
-                username: username,
-                password: password,
-                isAdmin: false,
-                profileName: username,
-                avatarDataUrl: '',
-                fullName: username,
-                groupNumber: '',
-                myEvents: []
-            };
-            saveUsers(users);
-
-            setCurrentUser({
-                username: username,
-                isAdmin: false,
-                profileName: username,
-                avatarDataUrl: '',
-                fullName: username,
-                groupNumber: '',
-                myEvents: []
-            });
-
-            document.getElementById('login-overlay').style.display = 'none';
-            updateUIForAuth();
-            showNotification('✅ Регистрация успешна! Добро пожаловать!');
-        }
-
         function handleLogout() {
-            if (confirm('Вы уверены, что хотите выйти?')) {
-                const currentUser = getCurrentUser();
-                if (currentUser && !currentUser.isAdmin) {
-                    const enrolledEventIds = data.events.filter(e => e.isEnrolled).map(e => e.id);
+            if (confirm('Выйти?')) {
+                const cu = getCurrentUser();
+                if (cu && !cu.isAdmin) {
                     const users = getUsers();
-                    if (users[currentUser.username]) {
-                        users[currentUser.username].myEvents = enrolledEventIds;
+                    if (users[cu.username]) {
+                        users[cu.username].myEvents = data.events.filter(e => e.isEnrolled).map(e => e.id);
+                        users[cu.username].fullName = cu.fullName; users[cu.username].groupNumber = cu.groupNumber;
+                        users[cu.username].phone = cu.phone; users[cu.username].email = cu.email;
+                        users[cu.username].avatarDataUrl = cu.avatarDataUrl; users[cu.username].documents = cu.documents;
                         saveUsers(users);
                     }
                 }
-                
-                data.events = data.events.map(e => ({...e, isEnrolled: false}));
-                saveData();
-                setCurrentUser(null);
-                updateUIForAuth();
-                showNotification('👋 Вы вышли из системы');
+                data.events = data.events.map(e => ({ ...e, isEnrolled: false })); saveData();
+                setCurrentUser(null); updateUIForAuth();
+                showNotification('👋 Вы вышли');
             }
         }
+        function openLoginOrProfile() { isLoggedIn() ? openProfileModal() : showLoginDialog(); }
 
-        function openLoginOrProfile() {
-            if (isLoggedIn()) {
-                openProfileModal();
-            } else {
-                showLoginDialog();
-            }
-        }
-
-        // ============ PROFILE SYSTEM ============
+        // ============ PROFILE ============
         function openProfileModal() {
-            const user = getCurrentUser();
-            if (!user) return;
-
-            const users = getUsers();
-            const userData = users[user.username] || user;
-            
-            document.getElementById('profile-fullname-input').value = userData.fullName || '';
-            document.getElementById('profile-group-input').value = userData.groupNumber || '';
-            document.getElementById('profile-avatar-preview').src = user.avatarDataUrl || 'images/default-avatar.png';
+            const u = getCurrentUser(); if (!u) return;
+            document.getElementById('profile-fullname-input').value = u.fullName || '';
+            document.getElementById('profile-group-input').value = u.groupNumber || '';
+            document.getElementById('profile-phone-input').value = u.phone || '';
+            document.getElementById('profile-email-input').value = u.email || '';
+            document.getElementById('profile-avatar-preview').src = u.avatarDataUrl || 'default-avatar.png';
             document.getElementById('profile-modal').style.display = 'flex';
         }
-
-        function closeProfileModal() {
-            document.getElementById('profile-modal').style.display = 'none';
+        function closeProfileModal() { document.getElementById('profile-modal').style.display = 'none'; }
+        function handleAvatarUpload(e) {
+            const f = e.target.files[0]; if (!f || f.size > 5*1024*1024) { alert('Макс 5MB'); return; }
+            const r = new FileReader();
+            r.onload = ev => document.getElementById('profile-avatar-preview').src = ev.target.result;
+            r.readAsDataURL(f);
         }
-
-        function handleAvatarUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Файл слишком большой! Максимальный размер: 5MB');
-                event.target.value = '';
-                return;
-            }
-
-            if (!file.type.startsWith('image/')) {
-                alert('Пожалуйста, выберите изображение!');
-                event.target.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                document.getElementById('profile-avatar-preview').src = e.target.result;
+        function uploadDocument(type, e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = ev => {
+                const cu = getCurrentUser(); if (!cu) return;
+                if (!cu.documents) cu.documents = {};
+                cu.documents[type] = ev.target.result;
+                setCurrentUser(cu);
+                showNotification('📄 Документ загружен!');
             };
-            reader.readAsDataURL(file);
+            r.readAsDataURL(f);
         }
-
         function saveProfileChanges() {
-            const user = getCurrentUser();
-            if (!user) return;
-
-            const newFullName = document.getElementById('profile-fullname-input').value.trim();
-            const newGroup = document.getElementById('profile-group-input').value.trim();
-            const newAvatar = document.getElementById('profile-avatar-preview').src;
-            
+            const u = getCurrentUser(); if (!u) return;
             const change = {
-                id: Date.now().toString(),
-                username: user.username,
-                type: 'profile_update',
-                oldFullName: user.fullName,
-                newFullName: newFullName || user.fullName,
-                oldGroup: user.groupNumber,
-                newGroup: newGroup || user.groupNumber,
-                oldAvatar: user.avatarDataUrl,
-                newAvatar: newAvatar !== 'images/default-avatar.png' ? newAvatar : '',
-                status: 'pending',
-                timestamp: new Date().toLocaleString('ru-RU')
+                id: Date.now().toString(), username: u.username, type: 'profile_update',
+                oldFullName: u.fullName, newFullName: document.getElementById('profile-fullname-input').value.trim() || u.fullName,
+                oldGroup: u.groupNumber, newGroup: document.getElementById('profile-group-input').value.trim() || u.groupNumber,
+                oldPhone: u.phone, newPhone: document.getElementById('profile-phone-input').value.trim(),
+                oldEmail: u.email, newEmail: document.getElementById('profile-email-input').value.trim(),
+                oldAvatar: u.avatarDataUrl,
+                newAvatar: document.getElementById('profile-avatar-preview').src !== 'default-avatar.png' ? document.getElementById('profile-avatar-preview').src : '',
+                status: 'pending', timestamp: new Date().toLocaleString('ru-RU')
             };
-
-            if (isAdmin()) {
-                applyProfileChange(change);
-                showNotification('✅ Изменения сохранены (администратор)');
-            } else {
-                const pendingChanges = getPendingChanges();
-                pendingChanges.push(change);
-                savePendingChanges(pendingChanges);
-                showNotification('📤 Изменения отправлены на одобрение администратору');
-            }
-
+            if (isAdmin()) { applyProfileChange(change); showNotification('✅ Сохранено'); }
+            else { const pc = getPendingChanges(); pc.push(change); savePendingChanges(pc); showNotification('📤 Отправлено на одобрение'); }
             closeProfileModal();
         }
-
         function applyProfileChange(change) {
             const users = getUsers();
             if (users[change.username]) {
-                users[change.username].profileName = change.newFullName;
-                users[change.username].fullName = change.newFullName;
-                users[change.username].groupNumber = change.newGroup;
-                users[change.username].avatarDataUrl = change.newAvatar;
+                const u = users[change.username];
+                u.fullName = change.newFullName; u.profileName = change.newFullName;
+                u.groupNumber = change.newGroup; u.phone = change.newPhone;
+                u.email = change.newEmail; u.avatarDataUrl = change.newAvatar;
                 saveUsers(users);
             }
-
-            const currentUser = getCurrentUser();
-            if (currentUser && currentUser.username === change.username) {
-                currentUser.profileName = change.newFullName;
-                currentUser.fullName = change.newFullName;
-                currentUser.groupNumber = change.newGroup;
-                currentUser.avatarDataUrl = change.newAvatar;
-                setCurrentUser(currentUser);
-                updateAllAvatars();
-                if (isLoggedIn()) renderGroupSection();
+            const cu = getCurrentUser();
+            if (cu && cu.username === change.username) {
+                cu.fullName = change.newFullName; cu.profileName = change.newFullName;
+                cu.groupNumber = change.newGroup; cu.phone = change.newPhone;
+                cu.email = change.newEmail; cu.avatarDataUrl = change.newAvatar;
+                setCurrentUser(cu); updateAllAvatars(); renderGroupSection();
             }
         }
 
-        // ============ UI UPDATE ============
+        // ============ UI ============
         function updateUIForAuth() {
-            const loggedIn = isLoggedIn();
-            const admin = isAdmin();
-            const user = getCurrentUser();
-
-            const navAvatar = document.getElementById('nav-avatar');
-            const navUsername = document.getElementById('nav-username');
-            
-            if (loggedIn && user) {
-                navAvatar.src = user.avatarDataUrl || 'images/default-avatar.png';
-                navUsername.textContent = user.profileName || user.username;
-                if (admin) {
-                    navUsername.innerHTML += ' <span class="admin-badge">ADMIN</span>';
-                }
-            } else {
-                navAvatar.src = 'images/default-avatar.png';
-                navUsername.textContent = 'Войти';
-            }
-
+            const loggedIn = isLoggedIn(), admin = isAdmin(), user = getCurrentUser();
+            document.getElementById('nav-avatar').src = (loggedIn && user && user.avatarDataUrl) ? user.avatarDataUrl : 'default-avatar.png';
+            document.getElementById('nav-username').textContent = loggedIn ? (user.profileName || 'Пользователь') : 'Войти';
+            if (admin && loggedIn) document.getElementById('nav-username').innerHTML += ' <span class="admin-badge">ADMIN</span>';
             document.getElementById('logout-btn').style.display = loggedIn ? 'inline-block' : 'none';
-            document.getElementById('nav-group-btn').style.display = loggedIn ? 'inline-block' : 'none';
-            document.getElementById('nav-myevents-btn').style.display = loggedIn ? 'inline-block' : 'none';
-            document.getElementById('nav-institute-btn').style.display = loggedIn ? 'inline-block' : 'none';
+            ['nav-group-btn', 'nav-myevents-btn', 'nav-institute-btn'].forEach(id => document.getElementById(id).style.display = loggedIn ? 'inline-block' : 'none');
             document.getElementById('nav-admin-btn').style.display = admin ? 'inline-block' : 'none';
             document.getElementById('adminPanel').style.display = admin ? 'block' : 'none';
-
-            // Show edit buttons only for admin
-            document.getElementById('group-edit-btn').style.display = admin ? 'inline-block' : 'none';
-            document.getElementById('events-edit-btn').style.display = admin ? 'inline-block' : 'none';
-            document.getElementById('institute-edit-btn').style.display = admin ? 'inline-block' : 'none';
-
+            ['group-edit-btn', 'events-edit-btn', 'institute-edit-btn'].forEach(id => document.getElementById(id).style.display = admin ? 'inline-block' : 'none');
             if (loggedIn) {
-                renderGroupSection();
-                renderMyEventsSection();
-                renderInstituteGroupsSection();
-                if (admin) renderAdminPanel();
+                renderGroupSection(); renderMyEventsSection(); renderInstituteGroupsSection();
+                if (admin) renderAdminPanel('changes');
             } else {
-                document.getElementById('group-content').innerHTML = `
-                    <div class="restricted-access">
-                        <div class="lock-icon">🔒</div>
-                        <p>Для просмотра группы необходимо войти в личный кабинет</p>
-                        <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                    </div>`;
-                document.getElementById('my-events-content').innerHTML = `
-                    <div class="restricted-access">
-                        <div class="lock-icon">🔒</div>
-                        <p>Для просмотра ваших мероприятий необходимо войти в личный кабинет</p>
-                        <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                    </div>`;
-                document.getElementById('institute-groups-content').innerHTML = `
-                    <div class="restricted-access">
-                        <div class="lock-icon">🔒</div>
-                        <p>Для просмотра групп института необходимо войти в личный кабинет</p>
-                        <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
-                    </div>`;
+                ['group', 'my-events', 'institute-groups'].forEach(id => {
+                    document.getElementById(id + '-content').innerHTML = '<div class="restricted-access"><div class="lock-icon">🔒</div><p>Необходимо войти</p><button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button></div>';
+                });
             }
-
             renderAllEvents();
         }
-
         function updateAllAvatars() {
-            const user = getCurrentUser();
-            const navAvatar = document.getElementById('nav-avatar');
-            if (navAvatar && user) {
-                navAvatar.src = user.avatarDataUrl || 'images/default-avatar.png';
-            }
+            const u = getCurrentUser();
+            if (u) document.getElementById('nav-avatar').src = u.avatarDataUrl || 'default-avatar.png';
         }
 
-        // ============ DATA MANAGEMENT ============
-        function getInitialData() {
-            return {
-                groupMembers: JSON.parse(localStorage.getItem('groupMembers') || 'null') || [
-                    { id: '1', name: 'Бесклубова Арина Сергеевна' },
-                    { id: '2', name: 'Ануфриев Артем Александрович' },
-                    { id: '3', name: 'Булатов Иван Григорьевич' },
-                    { id: '4', name: 'Ганюков Данил Андреевич' },
-                    { id: '5', name: 'Зайберт Константин Валерьевич' },
-                    { id: '6', name: 'Кодылев Андрей Александрович' },
-                    { id: '7', name: 'Копасова Виктория Витальевна' },
-                    { id: '8', name: 'Косенков Денис Алексеевич' },
-                    { id: '9', name: 'Кузнецов Роман Романович' },
-                    { id: '10', name: 'Кучеров Денис Евгеньевич' },
-                    { id: '11', name: 'Лисименко Алексей Вячеславович' },
-                    { id: '12', name: 'Литягина Анастасия Михайловна' },
-                    { id: '13', name: 'Лытарь Алексей Александрович' },
-                    { id: '14', name: 'Малец Дмитрий Евгеньевич' },
-                    { id: '15', name: 'Пинчук Иван Сергеевич' },
-                    { id: '16', name: 'Рутц Юлия Сергеевна' },
-                    { id: '17', name: 'Старкова Елизавета Юрьевна' },
-                    { id: '18', name: 'Удовик Анастасия Александровна' },
-                    { id: '19', name: 'Фотин Михаил Константинович' },
-                    { id: '20', name: 'Шинкоренко Владислав Дмитриевич' },
-                    { id: '21', name: 'Щербаков Никита Сергеевич' },
-                    { id: '22', name: 'Якимов Михаил Александрович' }
-                ],
-                events: JSON.parse(localStorage.getItem('events') || 'null') || [
-                    { id: '1', title: 'Региональный этап "Студлидер"', date: '26-28.04.2025', time: '18:00', type: 'star', description: 'Региональный этап Всероссийского конкурса "Студенческий лидер"', isEnrolled: false },
-                    { id: '2', title: 'Всероссийская школа "Лидер будущего"', date: '30.09-07.10.2025', time: '18:00', type: 'airplane', description: 'Школа для активистов профбюро Первичных профсоюзных организаций студентов', isEnrolled: false },
-                    { id: '3', title: 'Донорская акция на базе АлтГПУ', date: '01.05.2025', time: '8:00', type: 'droplet', description: 'Любой желающий студент, не имеющий противопоказаний к процедуре, может совершить благородное дело, сдав кровь', isEnrolled: false }
-                ],
-                instituteGroups: JSON.parse(localStorage.getItem('instituteGroups') || 'null') || [
-                    { id: '1', name: '3524д' }, { id: '2', name: '3523д' }, { id: '3', name: '3522д' }, { id: '4', name: '3521д' },
-                    { id: '5', name: '3515д' }, { id: '6', name: '3424д' }, { id: '7', name: '3423д' }, { id: '8', name: '3422д' },
-                    { id: '9', name: '3421д' }, { id: '10', name: '3415д' }, { id: '11', name: '3323д' }, { id: '12', name: '3322д' },
-                    { id: '13', name: '3321д' }, { id: '14', name: '3316д' }, { id: '15', name: '3315д' }, { id: '16', name: '3223д' },
-                    { id: '17', name: '3222д' }, { id: '18', name: '3221д' }, { id: '19', name: '3216д' }, { id: '20', name: '3215д' },
-                    { id: '21', name: '3123д' }, { id: '22', name: '3122д' }, { id: '23', name: '3121д' }
-                ]
-            };
-        }
-
-        let data = getInitialData();
-        let isEditingGroup = false;
-        let isEditingEvents = false;
-        let isEditingInstitute = false;
-
+        // ============ DATA ============
+        let data = {
+            groupMembers: JSON.parse(localStorage.getItem('groupMembers') || 'null') || [
+                { id: '1', name: 'Бесклубова Арина Сергеевна', role: 'Председатель' },
+                { id: '2', name: 'Ануфриев Артем Александрович', role: 'Секретарь' },
+                { id: '3', name: 'Булатов Иван Григорьевич', role: 'Студент' },
+                { id: '4', name: 'Ганюков Данил Андреевич', role: 'Студент' },
+                { id: '5', name: 'Зайберт Константин Валерьевич', role: 'Студент' },
+                { id: '6', name: 'Кодылев Андрей Александрович', role: 'Студент' },
+                { id: '7', name: 'Копасова Виктория Витальевна', role: 'Студент' },
+                { id: '8', name: 'Косенков Денис Алексеевич', role: 'Студент' },
+                { id: '9', name: 'Кузнецов Роман Романович', role: 'Студент' },
+                { id: '10', name: 'Кучеров Денис Евгеньевич', role: 'Студент' },
+                { id: '11', name: 'Лисименко Алексей Вячеславович', role: 'Студент' },
+                { id: '12', name: 'Литягина Анастасия Михайловна', role: 'Студент' },
+                { id: '13', name: 'Лытарь Алексей Александрович', role: 'Студент' },
+                { id: '14', name: 'Малец Дмитрий Евгеньевич', role: 'Студент' },
+                { id: '15', name: 'Пинчук Иван Сергеевич', role: 'Студент' },
+                { id: '16', name: 'Рутц Юлия Сергеевна', role: 'Заместитель председателя' },
+                { id: '17', name: 'Старкова Елизавета Юрьевна', role: 'Студент' },
+                { id: '18', name: 'Удовик Анастасия Александровна', role: 'Студент' },
+                { id: '19', name: 'Фотин Михаил Константинович', role: 'Студент' },
+                { id: '20', name: 'Шинкоренко Владислав Дмитриевич', role: 'Студент' },
+                { id: '21', name: 'Щербаков Никита Сергеевич', role: 'Студент' },
+                { id: '22', name: 'Якимов Михаил Александрович', role: 'Студент' }
+            ],
+            events: JSON.parse(localStorage.getItem('events') || 'null') || [
+                { id: '1', title: 'Региональный этап "Студлидер"', date: '26-28.04.2025', time: '18:00', type: 'star', description: 'Региональный этап Всероссийского конкурса "Студенческий лидер"', isEnrolled: false, maxParticipants: 0 },
+                { id: '2', title: 'Всероссийская школа "Лидер будущего"', date: '30.09-07.10.2025', time: '18:00', type: 'airplane', description: 'Школа для активистов профбюро', isEnrolled: false, maxParticipants: 0 },
+                { id: '3', title: 'Донорская акция на базе АлтГПУ', date: '01.05.2025', time: '8:00', type: 'droplet', description: 'Сдайте кровь - спасите жизнь!', isEnrolled: false, maxParticipants: 0 }
+            ],
+            instituteGroups: JSON.parse(localStorage.getItem('instituteGroups') || 'null') || [
+                { id: '1', name: '3524д' }, { id: '2', name: '3523д' }, { id: '3', name: '3522д' }, { id: '4', name: '3521д' },
+                { id: '5', name: '3515д' }, { id: '6', name: '3424д' }, { id: '7', name: '3423д' }, { id: '8', name: '3422д' },
+                { id: '9', name: '3421д' }, { id: '10', name: '3415д' }, { id: '11', name: '3323д' }, { id: '12', name: '3322д' },
+                { id: '13', name: '3321д' }, { id: '14', name: '3316д' }, { id: '15', name: '3315д' }, { id: '16', name: '3223д' },
+                { id: '17', name: '3222д' }, { id: '18', name: '3221д' }, { id: '19', name: '3216д' }, { id: '20', name: '3215д' },
+                { id: '21', name: '3123д' }, { id: '22', name: '3122д' }, { id: '23', name: '3121д' }
+            ]
+        };
+        let isEditingGroup = false, isEditingEvents = false, isEditingInstitute = false, currentAdminTab = 'changes';
         function saveData() {
             localStorage.setItem('groupMembers', JSON.stringify(data.groupMembers));
             localStorage.setItem('events', JSON.stringify(data.events));
             localStorage.setItem('instituteGroups', JSON.stringify(data.instituteGroups));
         }
 
-        // ============ RENDER FUNCTIONS ============
+        // ============ RENDER ============
         function renderAllEvents() {
-            const container = document.getElementById('all-events-container');
-            let html = data.events.map(event => createEventCard(event, true)).join('');
-            
-            if (isEditingEvents) {
-                html += `<button class="btn-add-event" onclick="document.getElementById('add-event-form').style.display='block'">+ Добавить мероприятие</button>`;
-            }
-            
-            container.innerHTML = html;
+            const c = document.getElementById('all-events-container');
+            let html = data.events.map(e => createEventCard(e, true)).join('');
+            if (isEditingEvents) html += '<button class="btn-add-event" onclick="document.getElementById(\'add-event-form\').style.display=\'block\'">+ Добавить мероприятие</button>';
+            c.innerHTML = html;
         }
-
         function renderMyEventsSection() {
-            const container = document.getElementById('my-events-content');
-            const myEvents = data.events.filter(e => e.isEnrolled);
-            
-            if (myEvents.length === 0) {
-                container.innerHTML = '<p class="empty-state">Вы пока не записались ни на одно мероприятие</p>';
-                return;
-            }
-
-            container.innerHTML = myEvents.map(event => createEventCard(event, false)).join('');
-        }
-
-        function renderGroupSection() {
-            const container = document.getElementById('group-content');
+            const c = document.getElementById('my-events-content');
             const user = getCurrentUser();
-            const profile = user || {};
+            const myEvents = data.events.filter(e => e.isEnrolled);
+            if (myEvents.length === 0) { c.innerHTML = '<p class="empty-state">Вы пока не записаны ни на одно мероприятие</p>'; return; }
+            c.innerHTML = myEvents.map(e => createEventCard(e, false, true)).join('');
+        }
+        function renderGroupSection() {
+            const c = document.getElementById('group-content');
+            const user = getCurrentUser();
+            const users = getUsers();
             let html = '<div class="grid-7">';
-            
-            data.groupMembers.forEach((member, index) => {
-                const isFirstMember = index === 0;
-                const showAvatar = isFirstMember && profile.avatarDataUrl;
-                
-                html += `
-                    <div class="member-card">
-                        <div class="member-avatar">
-                            ${showAvatar ? 
-                                `<img src="${profile.avatarDataUrl}" alt="${member.name}" onerror="this.innerHTML='<div class=\\'member-avatar-placeholder\\'>${member.name.charAt(0)}</div>'">` : 
-                                (isFirstMember ? 
-                                    `<div class="member-avatar-placeholder">${member.name.charAt(0)}</div>` : 
-                                    ''
-                                )
-                            }
-                            ${isEditingGroup ? `<button class="delete-btn" onclick="deleteMember('${member.id}')">✕</button>` : ''}
-                        </div>
-                        <p class="member-name">${member.name}</p>
-                    </div>`;
-            });
-
-            if (isEditingGroup) {
-                html += `
-                    <div class="member-card">
-                        <button class="add-btn" onclick="document.getElementById('add-member-form').style.display='block'">+</button>
-                        <p class="member-name">Добавить</p>
-                    </div>`;
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function renderInstituteGroupsSection() {
-            const container = document.getElementById('institute-groups-content');
-            let html = '<div class="grid-6">';
-            
-            data.instituteGroups.forEach(group => {
-                html += `
-                    <div class="member-card">
-                        <div class="group-avatar">
-                            ${isEditingInstitute ? `<button class="delete-btn" onclick="deleteGroup('${group.id}')">✕</button>` : ''}
-                            <p class="group-name">${group.name}</p>
-                        </div>
-                    </div>`;
-            });
-
-            if (isEditingInstitute) {
-                html += `
-                    <div class="member-card">
-                        <button class="add-btn add-btn-dark" onclick="document.getElementById('add-group-form').style.display='block'">+</button>
-                    </div>`;
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function renderAdminPanel() {
-            const container = document.getElementById('admin-content');
-            const pendingChanges = getPendingChanges();
-            
-            let html = '<h3 style="color:#033b7c; margin-bottom:20px;">Изменения, ожидающие одобрения</h3>';
-            
-            if (pendingChanges.length === 0) {
-                html += '<p style="color:#7190bf; font-size:18px;">Нет ожидающих изменений</p>';
-            } else {
-                html += '<div class="pending-changes">';
-                pendingChanges.forEach(change => {
-                    html += `
-                        <div class="change-item">
-                            <div class="change-info">
-                                <strong>Пользователь:</strong> ${change.username}<br>
-                                <strong>Тип:</strong> Изменение профиля<br>
-                                <strong>ФИО:</strong> ${change.oldFullName} → ${change.newFullName}<br>
-                                <strong>Группа:</strong> ${change.oldGroup || 'не указана'} → ${change.newGroup || 'не указана'}<br>
-                                <strong>Дата:</strong> ${change.timestamp}<br>
-                                ${change.newAvatar ? '<span style="color:#10b981;">✓ Новый аватар загружен</span>' : ''}
-                            </div>
-                            <div class="change-actions">
-                                <button class="btn-approve" onclick="approveChange('${change.id}')">✓ Одобрить</button>
-                                <button class="btn-reject" onclick="rejectChange('${change.id}')">✕ Отклонить</button>
-                            </div>
-                        </div>`;
-                });
+            data.groupMembers.forEach((m, i) => {
+                const uData = Object.values(users).find(u => u.fullName === m.name);
+                const avatarUrl = (uData && uData.avatarDataUrl) ? uData.avatarDataUrl : 'default-avatar.png';
+                html += '<div class="member-card">';
+                html += '<div class="member-avatar">';
+                html += `<img src="${avatarUrl}" alt="${m.name}" onerror="this.src='default-avatar.png'">`;
+                if (isEditingGroup) html += `<button class="delete-btn" onclick="deleteMember('${m.id}')">✕</button>`;
                 html += '</div>';
+                html += `<p class="member-name">${m.name}</p>`;
+                html += `<p class="member-role">${m.role || 'Студент'}</p>`;
+                html += '</div>';
+            });
+            if (isEditingGroup) html += '<div class="member-card"><button class="add-btn" onclick="document.getElementById(\'add-member-form\').style.display=\'block\'">+</button><p class="member-name">Добавить</p></div>';
+            html += '</div>'; c.innerHTML = html;
+        }
+        function renderInstituteGroupsSection() {
+            const c = document.getElementById('institute-groups-content');
+            let html = '<div class="grid-6">';
+            data.instituteGroups.forEach(g => {
+                html += '<div class="member-card"><div class="group-avatar">';
+                if (isEditingInstitute) html += `<button class="delete-btn" onclick="deleteGroup('${g.id}')">✕</button>`;
+                html += `<p class="group-name">${g.name}</p></div></div>`;
+            });
+            if (isEditingInstitute) html += '<div class="member-card"><button class="add-btn add-btn-dark" onclick="document.getElementById(\'add-group-form\').style.display=\'block\'">+</button></div>';
+            html += '</div>'; c.innerHTML = html;
+        }
+        function renderAdminPanel(tab) {
+            currentAdminTab = tab || 'changes';
+            const c = document.getElementById('admin-content');
+            if (tab === 'changes') {
+                const pc = getPendingChanges();
+                let html = '<h3 style="color:#033b7c;margin-bottom:20px;">Ожидающие изменения</h3>';
+                if (!pc.length) html += '<p style="color:#7190bf;">Нет ожидающих изменений</p>';
+                else {
+                    html += '<div class="pending-changes">';
+                    pc.forEach(ch => {
+                        html += `<div class="change-item"><div class="change-info"><strong>${ch.username}</strong> | ${ch.timestamp}<br>ФИО: ${ch.oldFullName} → ${ch.newFullName}<br>Группа: ${ch.oldGroup||'-'} → ${ch.newGroup||'-'}<br>Телефон: ${ch.oldPhone||'-'} → ${ch.newPhone||'-'}<br>Email: ${ch.oldEmail||'-'} → ${ch.newEmail||'-'}${ch.newAvatar?'<br>✓ Новый аватар':''}</div><div class="change-actions"><button class="btn-approve" onclick="approveChange(\''${ch.id}\')">✓ Одобрить</button><button class="btn-reject" onclick="rejectChange(\''${ch.id}\')">✕ Отклонить</button></div></div>`;
+                    });
+                    html += '</div>';
+                }
+                c.innerHTML = html;
+            } else if (tab === 'users') {
+                const users = getUsers();
+                let html = '<h3 style="color:#033b7c;margin-bottom:20px;">Пользователи</h3><table class="data-table"><thead><tr><th>Логин</th><th>ФИО</th><th>Группа</th><th>Роль</th><th>Мероприятий</th></tr></thead><tbody>';
+                Object.values(users).forEach(u => {
+                    html += `<tr><td>${u.username}</td><td>${u.fullName||'-'}</td><td>${u.groupNumber||'-'}</td><td>${u.isAdmin?'Админ':(u.role||'Студент')}</td><td>${(u.myEvents||[]).length}</td></tr>`;
+                });
+                html += '</tbody></table>'; c.innerHTML = html;
+            } else if (tab === 'applications') {
+                const apps = getApplications();
+                let html = '<h3 style="color:#033b7c;margin-bottom:20px;">Заявки на мероприятия</h3>';
+                if (!apps.length) html += '<p style="color:#7190bf;">Нет заявок</p>';
+                else {
+                    html += '<table class="data-table"><thead><tr><th>Пользователь</th><th>Мероприятие</th><th>Дата</th><th>Статус</th><th>Действия</th></tr></thead><tbody>';
+                    apps.forEach(a => {
+                        const ev = data.events.find(e => e.id === a.eventId);
+                        html += `<tr><td>${a.username}</td><td>${ev?ev.title:'-'}</td><td>${a.date}</td><td><span class="status-badge badge-${a.status==='approved'?'approved':a.status==='rejected'?'rejected':'pending'}">${a.status==='approved'?'Одобрено':a.status==='rejected'?'Отклонено':'Ожидает'}</span></td><td>${a.status==='pending'?`<button class="btn-approve" onclick="approveApplication('${a.id}')">✓</button> <button class="btn-reject" onclick="rejectApplication('${a.id}')">✕</button>`:'-'}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                }
+                c.innerHTML = html;
             }
-            
-            container.innerHTML = html;
+        }
+        function switchAdminTab(tab) {
+            document.querySelectorAll('#adminPanel .tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active'); renderAdminPanel(tab);
+        }
+        function approveChange(id) {
+            const pc = getPendingChanges(); const idx = pc.findIndex(c => c.id === id);
+            if (idx !== -1) { applyProfileChange(pc[idx]); pc.splice(idx, 1); savePendingChanges(pc); renderAdminPanel(currentAdminTab); updateAllAvatars(); renderGroupSection(); showNotification('✅ Одобрено'); }
+        }
+        function rejectChange(id) {
+            const pc = getPendingChanges(); const idx = pc.findIndex(c => c.id === id);
+            if (idx !== -1) { pc.splice(idx, 1); savePendingChanges(pc); renderAdminPanel(currentAdminTab); showNotification('❌ Отклонено'); }
+        }
+        function approveApplication(id) {
+            const apps = getApplications(); const a = apps.find(ap => ap.id === id);
+            if (a) { a.status = 'approved'; saveApplications(apps); renderAdminPanel(currentAdminTab); showNotification('✅ Заявка одобрена'); }
+        }
+        function rejectApplication(id) {
+            const apps = getApplications(); const a = apps.find(ap => ap.id === id);
+            if (a) { a.status = 'rejected'; saveApplications(apps); renderAdminPanel(currentAdminTab); showNotification('❌ Заявка отклонена'); }
         }
 
-        function approveChange(changeId) {
-            const pendingChanges = getPendingChanges();
-            const changeIndex = pendingChanges.findIndex(c => c.id === changeId);
-            
-            if (changeIndex !== -1) {
-                const change = pendingChanges[changeIndex];
-                applyProfileChange(change);
-                pendingChanges.splice(changeIndex, 1);
-                savePendingChanges(pendingChanges);
-                renderAdminPanel();
-                updateAllAvatars();
-                if (isLoggedIn()) renderGroupSection();
-                showNotification('✅ Изменения одобрены');
-            }
-        }
-
-        function rejectChange(changeId) {
-            const pendingChanges = getPendingChanges();
-            const changeIndex = pendingChanges.findIndex(c => c.id === changeId);
-            
-            if (changeIndex !== -1) {
-                pendingChanges.splice(changeIndex, 1);
-                savePendingChanges(pendingChanges);
-                renderAdminPanel();
-                showNotification('❌ Изменения отклонены');
-            }
-        }
-
-        function createEventCard(event, showActions = false) {
+        function createEventCard(event, showActions, showCertificate) {
             const loggedIn = isLoggedIn();
-            
             let iconHTML = '';
-            if (event.type === 'star') {
-                iconHTML = `<svg class="star-svg" fill="none" viewBox="0 0 144 144">
-                    <defs>
-                        <linearGradient id="sg-${event.id}" x1="57.8691" x2="131.222" y1="-31.644" y2="143.983">
-                            <stop stop-color="white" /><stop offset="1" stop-color="#108FE5" />
-                        </linearGradient>
-                    </defs>
-                    <path d="M72 3L89.6377 51.5491L142.073 55.1824L100.537 88.9509L113.275 140.318L72 113.4L30.7246 140.318L43.4635 88.9509L1.92705 55.1824L54.3623 51.5491L72 3Z" fill="url(#sg-${event.id})" stroke="black" stroke-width="2" />
-                </svg>`;
-            } else if (event.type === 'airplane') {
-                iconHTML = '<img src="images/airplane-icon.png" alt="" style="width:100px;height:100px;opacity:0.9;">';
-            } else if (event.type === 'droplet') {
-                iconHTML = '<div style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;"><div class="droplet-icon"></div></div>';
-            }
-
-            return `
-                <div class="event-card">
-                    <img src="images/event-bg-${event.type === 'airplane' ? 'airplane' : 'default'}.jpg" alt="" class="event-bg" onerror="this.style.display='none'">
-                    <div class="event-overlay"></div>
-                    <div class="event-content">
-                        <div class="event-info">
-                            <div class="event-icon">${iconHTML}</div>
-                            <div class="event-details">
-                                <h3>${event.title}</h3>
-                                <div class="event-meta">
-                                    <div><p class="event-meta-label">ДАТА</p><p class="event-meta-value">${event.date}</p></div>
-                                    <div><p class="event-meta-label">ВРЕМЯ</p><p class="event-meta-value">${event.time}</p></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="event-actions">
-                            <button class="btn-info" onclick="showDescription('${event.id}')">Описание</button>
-                            ${isEditingEvents ? `<button class="delete-btn" style="position:static;width:auto;height:auto;padding:12px 16px;font-size:20px;border-radius:8px;" onclick="deleteEvent('${event.id}')">✕</button>` : ''}
-                            ${loggedIn ? 
-                                `<button class="btn-enroll ${event.isEnrolled ? 'active' : ''}" onclick="toggleEnroll('${event.id}')">${event.isEnrolled ? 'Отменить запись' : 'Записаться'}</button>` : 
-                                '<button class="btn-info" onclick="showLoginDialog()">Войти, чтобы записаться</button>'
-                            }
-                        </div>
+            if (event.type === 'star') iconHTML = `<svg class="star-svg" viewBox="0 0 144 144"><defs><linearGradient id="sg${event.id}" x1="57" x2="131" y1="-31" y2="143"><stop stop-color="white"/><stop offset="1" stop-color="#108FE5"/></linearGradient></defs><path d="M72 3L89.6 51.5L142 55.2L100.5 88.9L113.3 140.3L72 113.4L30.7 140.3L43.5 88.9L1.9 55.2L54.4 51.5Z" fill="url(#sg${event.id})" stroke="black" stroke-width="2"/></svg>`;
+            else if (event.type === 'airplane') iconHTML = '<img src="airplane-icon.png" style="width:100px;height:100px;opacity:0.9;">';
+            else iconHTML = '<div style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;"><div class="droplet-icon"></div></div>';
+            return `<div class="event-card">
+                <img src="event-bg-${event.type==='airplane'?'airplane':'default'}.jpg" class="event-bg" onerror="this.style.display='none'">
+                <div class="event-overlay"></div>
+                <div class="event-content">
+                    <div class="event-info"><div class="event-icon">${iconHTML}</div><div class="event-details"><h3>${event.title}</h3><div class="event-meta"><div><p class="event-meta-label">ДАТА</p><p class="event-meta-value">${event.date}</p></div><div><p class="event-meta-label">ВРЕМЯ</p><p class="event-meta-value">${event.time}</p></div></div></div></div>
+                    <div class="event-actions">
+                        <button class="btn-info" onclick="showDescription('${event.id}')">Описание</button>
+                        ${isEditingEvents ? `<button class="delete-btn" style="position:static;width:auto;height:auto;padding:12px 16px;font-size:20px;border-radius:8px;" onclick="deleteEvent('${event.id}')">✕</button>` : ''}
+                        ${showCertificate ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">🏆 Сертификат</button>` : ''}
+                        ${loggedIn ? `<button class="btn-enroll ${event.isEnrolled?'active':''}" onclick="toggleEnroll('${event.id}')">${event.isEnrolled?'Отменить запись':'Записаться'}</button>` : '<button class="btn-info" onclick="showLoginDialog()">Войти</button>'}
                     </div>
-                </div>`;
+                </div>
+            </div>`;
         }
 
-        // ============ CRUD OPERATIONS ============
-        function toggleGroupEdit() {
-            isEditingGroup = !isEditingGroup;
-            document.getElementById('group-edit-btn').textContent = isEditingGroup ? 'Готово' : 'Редактировать';
-            if (!isEditingGroup) {
-                document.getElementById('add-member-form').style.display = 'none';
-                document.getElementById('new-member-name').value = '';
-            }
-            renderGroupSection();
+        function showCertificate(eventId) {
+            const user = getCurrentUser(); if (!user) return;
+            const event = data.events.find(e => e.id === eventId); if (!event) return;
+            const c = document.getElementById('certificate-content');
+            c.innerHTML = `<div class="certificate-preview">
+                <h2>🏆 СЕРТИФИКАТ УЧАСТНИКА</h2>
+                <p style="font-size:24px;margin:20px 0;">Настоящим подтверждается, что</p>
+                <p style="font-size:28px;font-weight:700;color:#033b7c;">${user.fullName}</p>
+                <p style="font-size:20px;">принял(а) участие в мероприятии</p>
+                <p style="font-size:24px;font-weight:700;color:#033b7c;">${event.title}</p>
+                <p style="font-size:18px;">Дата проведения: ${event.date}</p>
+                <p style="font-size:18px;">Роль: ${user.role || 'Участник'}</p>
+                <div class="certificate-stamp">ППОС АлтГПУ</div>
+                <button class="btn-submit" style="margin-top:20px;" onclick="printCertificate()">🖨️ Распечатать</button>
+            </div>`;
+            document.getElementById('certificate-modal').style.display = 'flex';
         }
-
-        function toggleEventsEdit() {
-            isEditingEvents = !isEditingEvents;
-            document.getElementById('events-edit-btn').textContent = isEditingEvents ? 'Готово' : 'Редактировать';
-            if (!isEditingEvents) document.getElementById('add-event-form').style.display = 'none';
-            renderAllEvents();
+        function printCertificate() {
+            const content = document.getElementById('certificate-content').innerHTML;
+            const w = window.open('', '_blank');
+            w.document.write(`<html><head><title>Сертификат</title><style>body{font-family:Arial;padding:40px;}.certificate-preview{border:5px solid #064591;padding:40px;text-align:center;background:linear-gradient(135deg,#f9fafb,#e5f0ff);border-radius:20px;}h2{color:#033b7c;font-size:28px;}p{font-size:18px;line-height:1.8;color:#163a6f;}.certificate-stamp{font-size:60px;opacity:0.3;margin-top:20px;}</style></head><body>${content}</body></html>`);
+            w.document.close(); setTimeout(() => w.print(), 500);
         }
+        function closeCertificateModal() { document.getElementById('certificate-modal').style.display = 'none'; }
 
-        function toggleInstituteEdit() {
-            isEditingInstitute = !isEditingInstitute;
-            document.getElementById('institute-edit-btn').textContent = isEditingInstitute ? 'Готово' : 'Редактировать';
-            if (!isEditingInstitute) {
-                document.getElementById('add-group-form').style.display = 'none';
-                document.getElementById('new-group-name').value = '';
-            }
-            renderInstituteGroupsSection();
-        }
-
-        function addMember() {
-            const name = document.getElementById('new-member-name').value.trim();
-            if (name) {
-                data.groupMembers.push({ id: Date.now().toString(), name });
-                saveData();
-                document.getElementById('add-member-form').style.display = 'none';
-                document.getElementById('new-member-name').value = '';
-                renderGroupSection();
-            }
-        }
-
-        function cancelAddMember() {
-            document.getElementById('add-member-form').style.display = 'none';
-            document.getElementById('new-member-name').value = '';
-        }
-
-        function deleteMember(id) {
-            if (confirm('Удалить участника?')) {
-                data.groupMembers = data.groupMembers.filter(m => m.id !== id);
-                saveData();
-                renderGroupSection();
-            }
-        }
-
+        // ============ CRUD ============
+        function toggleGroupEdit() { isEditingGroup = !isEditingGroup; document.getElementById('group-edit-btn').textContent = isEditingGroup ? 'Готово' : 'Редактировать'; if (!isEditingGroup) { document.getElementById('add-member-form').style.display = 'none'; } renderGroupSection(); }
+        function toggleEventsEdit() { isEditingEvents = !isEditingEvents; document.getElementById('events-edit-btn').textContent = isEditingEvents ? 'Готово' : 'Редактировать'; if (!isEditingEvents) document.getElementById('add-event-form').style.display = 'none'; renderAllEvents(); }
+        function toggleInstituteEdit() { isEditingInstitute = !isEditingInstitute; document.getElementById('institute-edit-btn').textContent = isEditingInstitute ? 'Готово' : 'Редактировать'; if (!isEditingInstitute) { document.getElementById('add-group-form').style.display = 'none'; } renderInstituteGroupsSection(); }
+        function addMember() { const n = document.getElementById('new-member-name').value.trim(); if (n) { data.groupMembers.push({ id: Date.now().toString(), name: n, role: 'Студент' }); saveData(); document.getElementById('add-member-form').style.display = 'none'; renderGroupSection(); } }
+        function cancelAddMember() { document.getElementById('add-member-form').style.display = 'none'; }
+        function deleteMember(id) { if (confirm('Удалить?')) { data.groupMembers = data.groupMembers.filter(m => m.id !== id); saveData(); renderGroupSection(); } }
         function addEvent() {
-            const title = document.getElementById('new-event-title').value.trim();
-            const date = document.getElementById('new-event-date').value.trim();
-            const time = document.getElementById('new-event-time').value.trim();
-            const type = document.getElementById('new-event-type').value;
-            const description = document.getElementById('new-event-description').value.trim();
-            
-            if (title && date && time) {
-                data.events.push({ id: Date.now().toString(), title, date, time, type, description, isEnrolled: false });
-                saveData();
-                document.getElementById('add-event-form').style.display = 'none';
-                document.getElementById('new-event-title').value = '';
-                document.getElementById('new-event-date').value = '';
-                document.getElementById('new-event-time').value = '';
-                document.getElementById('new-event-type').value = 'star';
-                document.getElementById('new-event-description').value = '';
-                renderAllEvents();
-                renderMyEventsSection();
-            } else {
-                alert('Заполните обязательные поля: название, дата, время');
-            }
+            const t = document.getElementById('new-event-title').value.trim(), d = document.getElementById('new-event-date').value.trim(), tm = document.getElementById('new-event-time').value.trim(), tp = document.getElementById('new-event-type').value, desc = document.getElementById('new-event-description').value.trim(), mx = parseInt(document.getElementById('new-event-max').value) || 0;
+            if (t && d && tm) { data.events.push({ id: Date.now().toString(), title: t, date: d, time: tm, type: tp, description: desc, isEnrolled: false, maxParticipants: mx }); saveData(); document.getElementById('add-event-form').style.display = 'none'; renderAllEvents(); }
+            else alert('Заполните обязательные поля');
         }
-
-        function cancelAddEvent() {
-            document.getElementById('add-event-form').style.display = 'none';
-        }
-
-        function deleteEvent(id) {
-            if (confirm('Удалить мероприятие?')) {
-                data.events = data.events.filter(e => e.id !== id);
-                saveData();
-                renderAllEvents();
-                renderMyEventsSection();
-            }
-        }
-
-        function addGroup() {
-            const name = document.getElementById('new-group-name').value.trim();
-            if (name) {
-                data.instituteGroups.push({ id: Date.now().toString(), name });
-                saveData();
-                document.getElementById('add-group-form').style.display = 'none';
-                document.getElementById('new-group-name').value = '';
-                renderInstituteGroupsSection();
-            }
-        }
-
-        function cancelAddGroup() {
-            document.getElementById('add-group-form').style.display = 'none';
-            document.getElementById('new-group-name').value = '';
-        }
-
-        function deleteGroup(id) {
-            if (confirm('Удалить группу?')) {
-                data.instituteGroups = data.instituteGroups.filter(g => g.id !== id);
-                saveData();
-                renderInstituteGroupsSection();
-            }
-        }
-
+        function cancelAddEvent() { document.getElementById('add-event-form').style.display = 'none'; }
+        function deleteEvent(id) { if (confirm('Удалить?')) { data.events = data.events.filter(e => e.id !== id); saveData(); renderAllEvents(); } }
+        function addGroup() { const n = document.getElementById('new-group-name').value.trim(); if (n) { data.instituteGroups.push({ id: Date.now().toString(), name: n }); saveData(); document.getElementById('add-group-form').style.display = 'none'; renderInstituteGroupsSection(); } }
+        function cancelAddGroup() { document.getElementById('add-group-form').style.display = 'none'; }
+        function deleteGroup(id) { if (confirm('Удалить?')) { data.instituteGroups = data.instituteGroups.filter(g => g.id !== id); saveData(); renderInstituteGroupsSection(); } }
         function toggleEnroll(id) {
             if (!isLoggedIn()) { showLoginDialog(); return; }
-            
-            data.events = data.events.map(e => e.id === id ? {...e, isEnrolled: !e.isEnrolled} : e);
-            saveData();
-            renderAllEvents();
-            renderMyEventsSection();
-            
+            data.events = data.events.map(e => e.id === id ? { ...e, isEnrolled: !e.isEnrolled } : e); saveData();
             const event = data.events.find(e => e.id === id);
             if (event && event.isEnrolled) {
-                showNotification('✅ Вы записаны на мероприятие!');
+                const apps = getApplications(); apps.push({ id: Date.now().toString(), username: getCurrentUser().username, eventId: id, date: new Date().toLocaleDateString('ru-RU'), status: 'pending' }); saveApplications(apps);
             }
+            renderAllEvents(); renderMyEventsSection();
+            showNotification(event && event.isEnrolled ? '✅ Вы записаны!' : 'ℹ️ Запись отменена');
         }
+        function showDescription(id) { const e = data.events.find(ev => ev.id === id); if (e) { document.getElementById('modal-description').textContent = e.description; document.getElementById('description-modal').style.display = 'flex'; } }
+        function closeDescriptionModal() { document.getElementById('description-modal').style.display = 'none'; }
+        function scrollToSection(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth' }); }
+        function showNotification(msg) { const n = document.createElement('div'); n.className = 'notification'; n.textContent = msg; document.body.appendChild(n); setTimeout(() => n.remove(), 3000); }
 
-        function showDescription(id) {
-            const event = data.events.find(e => e.id === id);
-            if (event) {
-                document.getElementById('modal-description').textContent = event.description;
-                document.getElementById('description-modal').style.display = 'flex';
-            }
-        }
-
-        function closeDescriptionModal() {
-            document.getElementById('description-modal').style.display = 'none';
-        }
-
-        function scrollToSection(sectionId) {
-            const element = document.getElementById(sectionId);
-            if (element) element.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'notification';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
-
-        // ============ INITIALIZATION ============
-        function init() {
-            initUsers();
-            renderAllEvents();
-            updateUIForAuth();
-        }
-
+        function init() { initUsers(); renderAllEvents(); updateUIForAuth(); }
         init();
     </script>
 </body>
