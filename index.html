@@ -512,7 +512,7 @@
             document.getElementById('profile-role-input').value = u.role || 'Студент';
             document.getElementById('profile-phone-input').value = u.phone || '';
             document.getElementById('profile-email-input').value = u.email || '';
-            document.getElementById('profile-avatar-preview').src = u.avatarDataUrl || 'default-avatar.png';
+            document.getElementById('profile-avatar-preview').src = u.avatarDataUrl || 'images/default-avatar.png';
             document.getElementById('profile-modal').style.display = 'flex';
         }
         function closeProfileModal() { document.getElementById('profile-modal').style.display = 'none'; }
@@ -545,7 +545,7 @@
                 oldPhone: u.phone, newPhone: document.getElementById('profile-phone-input').value.trim(),
                 oldEmail: u.email, newEmail: document.getElementById('profile-email-input').value.trim(),
                 oldAvatar: u.avatarDataUrl,
-                newAvatar: document.getElementById('profile-avatar-preview').src !== 'default-avatar.png' ? document.getElementById('profile-avatar-preview').src : '',
+                newAvatar: document.getElementById('profile-avatar-preview').src !== 'images/default-avatar.png' ? document.getElementById('profile-avatar-preview').src : '',
                 status: 'pending', timestamp: new Date().toLocaleString('ru-RU')
             };
             if (isAdmin()) { applyProfileChange(change); showNotification('✅ Сохранено'); }
@@ -575,7 +575,7 @@
         // ============ UI ============
         function updateUIForAuth() {
             const loggedIn = isLoggedIn(), admin = isAdmin(), user = getCurrentUser();
-            document.getElementById('nav-avatar').src = (loggedIn && user && user.avatarDataUrl) ? user.avatarDataUrl : 'default-avatar.png';
+            document.getElementById('nav-avatar').src = (loggedIn && user && user.avatarDataUrl) ? user.avatarDataUrl : 'images/default-avatar.png';
             document.getElementById('nav-username').textContent = loggedIn ? (user.profileName || 'Пользователь') : 'Войти';
             if (admin && loggedIn) document.getElementById('nav-username').innerHTML += ' <span class="admin-badge">ADMIN</span>';
             document.getElementById('logout-btn').style.display = loggedIn ? 'inline-block' : 'none';
@@ -595,7 +595,7 @@
         }
         function updateAllAvatars() {
             const u = getCurrentUser();
-            if (u) document.getElementById('nav-avatar').src = u.avatarDataUrl || 'default-avatar.png';
+            if (u) document.getElementById('nav-avatar').src = u.avatarDataUrl || 'images/default-avatar.png';
         }
 
         // ============ DATA ============
@@ -653,10 +653,10 @@
             let html = '<div class="grid-7">';
             data.groupMembers.forEach((m) => {
                 const uData = Object.values(users).find(u => u.fullName === m.name);
-                const avatarUrl = (uData && uData.avatarDataUrl) ? uData.avatarDataUrl : 'default-avatar.png';
+                const avatarUrl = (uData && uData.avatarDataUrl) ? uData.avatarDataUrl : 'images/default-avatar.png';
                 html += '<div class="member-card">';
                 html += '<div class="member-avatar">';
-                html += `<img src="${avatarUrl}" alt="${m.name}" onerror="this.src='default-avatar.png'">`;
+                html += `<img src="${avatarUrl}" alt="${m.name}" onerror="this.src='images/default-avatar.png'">`;
                 if (isEditingGroup) html += `<button class="delete-btn" onclick="deleteMember('${m.id}')">✕</button>`;
                 html += '</div>';
                 html += `<p class="member-name">${m.name}</p>`;
@@ -738,10 +738,10 @@
             const loggedIn = isLoggedIn();
             let iconHTML = '';
             if (event.type === 'star') iconHTML = `<svg class="star-svg" viewBox="0 0 144 144"><defs><linearGradient id="sg${event.id}" x1="57" x2="131" y1="-31" y2="143"><stop stop-color="white"/><stop offset="1" stop-color="#108FE5"/></linearGradient></defs><path d="M72 3L89.6 51.5L142 55.2L100.5 88.9L113.3 140.3L72 113.4L30.7 140.3L43.5 88.9L1.9 55.2L54.4 51.5Z" fill="url(#sg${event.id})" stroke="black" stroke-width="2"/></svg>`;
-            else if (event.type === 'airplane') iconHTML = '<img src="airplane-icon.png" style="width:100px;height:100px;opacity:0.9;">';
+            else if (event.type === 'airplane') iconHTML = '<img src="images/airplane-icon.png" style="width:100px;height:100px;opacity:0.9;">';
             else iconHTML = '<div style="width:100px;height:100px;display:flex;align-items:center;justify-content:center;"><div class="droplet-icon"></div></div>';
             return `<div class="event-card">
-                <img src="event-bg-${event.type==='airplane'?'airplane':'default'}.jpg" class="event-bg" onerror="this.style.display='none'">
+                <img src="images/event-bg-${event.type==='airplane'?'airplane':'default'}.jpg" class="event-bg" onerror="this.style.display='none'">
                 <div class="event-overlay"></div>
                 <div class="event-content">
                     <div class="event-info"><div class="event-icon">${iconHTML}</div><div class="event-details"><h3>${event.title}</h3><div class="event-meta"><div><p class="event-meta-label">ДАТА</p><p class="event-meta-value">${event.date}</p></div><div><p class="event-meta-label">ВРЕМЯ</p><p class="event-meta-value">${event.time}</p></div></div></div></div>
@@ -759,7 +759,7 @@
             const user = getCurrentUser(); if (!user) return;
             const event = data.events.find(e => e.id === eventId); if (!event) return;
             const isOrganizer = user.role === 'Председатель' || user.role === 'Активист профбюро';
-            const certImage = isOrganizer ? 'certificate-organizer.png' : 'certificate-participant.png';
+            const certImage = isOrganizer ? 'images/certificate-organizer.png' : 'images/certificate-participant.png';
             const nameTop = isOrganizer ? '36%' : '41%';
             const nameSize = isOrganizer ? '26px' : '30px';
             const dateTop = isOrganizer ? '81%' : '79%';
