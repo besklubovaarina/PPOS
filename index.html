@@ -385,8 +385,24 @@
             </div>
         </div>
     </div>
-
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script>
+        // ============ FIREBASE CONFIG ============
+        const firebaseConfig = {
+            apiKey: "AIzaSyAz2jHBydVAaZwJNs4gLo06WGSjZZXHcMs",
+            authDomain: "ppos-6c59f.firebaseapp.com",
+            projectId: "ppos-6c59f",
+            storageBucket: "ppos-6c59f.firebasestorage.app",
+            messagingSenderId: "685542160795",
+            appId: "1:685542160795:web:65bddde9bb6c4e7556893e"
+        };
+        
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
         // ============ STORAGE ============
         function getUsers() { return JSON.parse(localStorage.getItem('platformUsers') || '{}'); }
         function saveUsers(u) { localStorage.setItem('platformUsers', JSON.stringify(u)); }
