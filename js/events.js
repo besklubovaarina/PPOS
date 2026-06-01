@@ -19,6 +19,72 @@ function _parseDate(s) {
 }
 
 /* ================================================================
+   ПРИКРЕПЛЁННЫЕ ФАЙЛЫ К МЕРОПРИЯТИЮ
+   ================================================================ */
+
+/** Рендерит список прикреплённых файлов в форме мероприятия. */
+function renderEventAttachmentsList() {
+    const container = document.getElementById('event-attachments-list');
+    if (!container) return;
+    if (adminEventAttachments.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = adminEventAttachments.map(f => `
+        <div style="display:flex;align-items:center;gap:10px;background:#f0f7ff;border-radius:10px;padding:8px 14px;margin-bottom:6px;border:1px solid #bfdef3;">
+            <span style="flex:1;font-size:14px;color:#033b7c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                📎 ${escapeHTML(f.name)}
+            </span>
+            <button type="button" onclick="removeEventAttachment('${f.id}')"
+                    style="flex:0 0 auto;background:none;border:none;color:#dc2626;cursor:pointer;font-size:18px;padding:0 4px;"
+                    title="Удалить">✕</button>
+        </div>`).join('');
+}
+
+/** Читает файлы из input и добавляет в adminEventAttachments. */
+function handleEventAttachmentsAdd(input) {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
+    const reads = files.map(file => new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+            adminEventAttachments.push({
+                id:   Date.now().toString() + Math.random().toString(36).slice(2),
+                name: file.name,
+                data: ev.target.result,
+                type: file.type,
+            });
+            resolve();
+        };
+        reader.onerror = () => resolve();
+        reader.readAsDataURL(file);
+    }));
+    Promise.all(reads).then(() => {
+        renderEventAttachmentsList();
+        input.value = '';
+    });
+}
+
+/** Удаляет прикреплённый файл по id. */
+function removeEventAttachment(id) {
+    adminEventAttachments = adminEventAttachments.filter(f => f.id !== id);
+    renderEventAttachmentsList();
+}
+
+/** Скачивает прикреплённый файл из данных мероприятия. */
+function downloadEventAttachment(eventId, fileId) {
+    const events = getEventsFromStorage() || [];
+    const event  = events.find(e => e.id === eventId);
+    if (!event || !event.attachments) return;
+    const file = event.attachments.find(f => f.id === fileId);
+    if (!file || !file.data) return;
+    const a = document.createElement('a');
+    a.href     = file.data;
+    a.download = file.name;
+    a.click();
+}
+
+/* ================================================================
    ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
    ================================================================ */
 
@@ -543,7 +609,7 @@ function _showRegErrors(errors) {
 }
 
 /** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
-function _finalizeRegistration(eventId, user, answers, event) {
+function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
     // Повторная проверка лимита (за время читатели FileReader могли успеть)
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
@@ -565,15 +631,16 @@ function _finalizeRegistration(eventId, user, answers, event) {
     // Создаём заявку
     const apps = getApplications();
     apps.push({
-        id:           Date.now().toString(),
-        username:     user.username,
-        fullName:     user.fullName,
+        id:              Date.now().toString(),
+        username:        user.username,
+        fullName:        user.fullName,
         eventId,
-        date:         new Date().toLocaleDateString('ru-RU'),
-        timestamp:    new Date().toISOString(),
-        status:       'pending',
-        consentGiven: true,
+        date:            new Date().toLocaleDateString('ru-RU'),
+        timestamp:       new Date().toISOString(),
+        status:          'pending',
+        consentGiven:    true,
         answers,
+        applicationRole: appRole,
     });
     saveApplications(apps);
 
@@ -712,6 +779,16 @@ function openEditEventForm(eventId) {
     adminFormFields = event.formFields ? event.formFields.map(f => ({ ...f })) : [];
     toggleEventFormBuilder(requiresForm);
 
+    // Восстанавливаем прикреплённые файлы
+    adminEventAttachments = (event.attachments || []).map(f => ({ ...f }));
+    renderEventAttachmentsList();
+
+    // Показываем секцию статуса и задаём значение
+    const statusSection = document.getElementById('event-status-section');
+    if (statusSection) statusSection.style.display = 'block';
+    const statusEl = document.getElementById('new-event-status');
+    if (statusEl) statusEl.value = event.status || 'open';
+
     document.getElementById('event-form-modal').style.display = 'flex';
 }
 
@@ -745,6 +822,7 @@ function addEvent() {
 
     if (currentEditEventId) {
         // Режим редактирования
+        const status = document.getElementById('new-event-status')?.value || 'open';
         const idx = events.findIndex(e => e.id === currentEditEventId);
         if (idx !== -1) {
             events[idx] = {
@@ -758,6 +836,8 @@ function addEvent() {
                 reserveCount:    reserve,
                 requiresForm:    needsForm,
                 formFields,
+                status,
+                attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
         }
         showNotification('Мероприятие обновлено', 'success');
@@ -775,6 +855,7 @@ function addEvent() {
             requiresForm:    needsForm,
             formFields,
             status:          'open',
+            attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
     }
@@ -814,6 +895,16 @@ function resetEventForm() {
     if (submitEl) submitEl.textContent = 'Добавить мероприятие';
 
     toggleEventFormBuilder(false);
+
+    // Сброс прикреплённых файлов
+    adminEventAttachments = [];
+    renderEventAttachmentsList();
+
+    // Скрываем и сбрасываем секцию статуса
+    const statusSection = document.getElementById('event-status-section');
+    if (statusSection) statusSection.style.display = 'none';
+    const statusEl = document.getElementById('new-event-status');
+    if (statusEl) statusEl.value = 'open';
 }
 
 /* ================================================================
@@ -997,6 +1088,17 @@ function showEventDescription(eventId) {
            }</ul>`
         : '';
 
+    const attachHtml = event.attachments?.length > 0 ? `
+        <hr style="border:none;border-top:2px solid #e5e7eb;margin:18px 0;">
+        <p style="font-weight:700;color:#033b7c;margin-bottom:10px;">Прикреплённые материалы:</p>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            ${event.attachments.map(f => `
+                <button class="btn-file-dl" style="text-align:left;padding:8px 14px;font-size:14px;"
+                        onclick="downloadEventAttachment('${event.id}','${f.id}')">
+                    📎 ${escapeHTML(f.name)}
+                </button>`).join('')}
+        </div>` : '';
+
     document.getElementById('modal-description').innerHTML = `
         <p style="font-size:16px;color:#6b7280;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">
             ${getTypeLabel(event.type)}
@@ -1027,7 +1129,8 @@ function showEventDescription(eventId) {
         <p style="line-height:1.8;color:#163a6f;font-size:17px;">
             ${escapeHTML(event.description) || 'Описание не указано'}
         </p>
-        ${fieldsInfo}`;
+        ${fieldsInfo}
+        ${attachHtml}`;
 
     document.getElementById('description-modal').style.display = 'flex';
 }

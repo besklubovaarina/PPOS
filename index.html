@@ -620,6 +620,29 @@
             </button>
         </div>
 
+        <!-- Прикреплённые файлы и материалы -->
+        <div class="form-section-block" style="margin-top:14px;">
+            <label class="form-label">Прикреплённые файлы и материалы</label>
+            <p class="form-hint">Памятки, уставы, программы — видны всем пользователям в описании мероприятия</p>
+            <div id="event-attachments-list" style="margin-bottom:10px;"></div>
+            <div class="file-input-wrapper" style="display:block;">
+                <span class="file-input-btn" style="font-size:14px;padding:8px 16px;">+ Добавить файлы</span>
+                <input type="file" id="new-event-attachments-input" multiple
+                       accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"
+                       onchange="handleEventAttachmentsAdd(this)">
+            </div>
+        </div>
+
+        <!-- Статус мероприятия (только при редактировании) -->
+        <div id="event-status-section" style="display:none;margin-top:14px;">
+            <label class="form-label" for="new-event-status">Статус мероприятия</label>
+            <select id="new-event-status" class="form-input" style="margin-bottom:0;">
+                <option value="open">Открыто — идёт запись</option>
+                <option value="closed">Закрыто — запись прекращена</option>
+                <option value="completed">Завершено — доступны сертификаты</option>
+            </select>
+        </div>
+
         <div class="form-actions" style="margin-top:24px;">
             <button class="btn-submit" id="event-form-submit-btn" onclick="addEvent()">
                 Добавить мероприятие
@@ -648,6 +671,21 @@
 
         <!-- Дата / время / мест -->
         <div id="reg-event-meta" class="reg-event-meta"></div>
+
+        <!-- Выбор роли (только для активистов и председателей) -->
+        <div id="reg-role-block" style="display:none;margin-bottom:4px;">
+            <p class="form-label" style="margin-bottom:10px;">Ваша роль на мероприятии:</p>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                <label class="consent-label" style="background:var(--blue-pale);padding:10px 16px;border-radius:12px;border:1.5px solid var(--blue-light);cursor:pointer;">
+                    <input type="radio" name="reg-role" value="participant" checked style="width:18px;height:18px;accent-color:var(--blue-main);flex-shrink:0;">
+                    <span>Участник</span>
+                </label>
+                <label class="consent-label" style="background:var(--blue-pale);padding:10px 16px;border-radius:12px;border:1.5px solid var(--blue-light);cursor:pointer;">
+                    <input type="radio" name="reg-role" value="organizer" style="width:18px;height:18px;accent-color:var(--blue-main);flex-shrink:0;">
+                    <span>Организатор</span>
+                </label>
+            </div>
+        </div>
 
         <hr style="border:none;border-top:2px solid #e5f0ff;margin:18px 0;">
 
