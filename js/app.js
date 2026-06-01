@@ -35,6 +35,7 @@ document.addEventListener('keydown', e => {
     closeCertificateModal();
     closeLoginDialog();
     closeProfileModal();
+    closeRegistrationModal();
 });
 
 /* ================================================================

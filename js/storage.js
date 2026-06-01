@@ -11,6 +11,7 @@ const KEYS = {
     APPLICATIONS:    'ppos_applications',
     PENDING_CHANGES: 'ppos_pending_changes',
     CURRENT_USER:    'ppos_current_user',
+    NOTIFICATIONS:   'ppos_notifications',
 };
 
 /* ---------- Пользователи ---------- */
@@ -81,6 +82,46 @@ function setCurrentUser(user) {
     } else {
         sessionStorage.removeItem(KEYS.CURRENT_USER);
     }
+}
+
+/* ---------- Уведомления пользователей ---------- */
+
+/** Возвращает все уведомления пользователя. */
+function getUserNotifications(username) {
+    const all = JSON.parse(localStorage.getItem(KEYS.NOTIFICATIONS) || '{}');
+    return all[username] || [];
+}
+
+/** Сохраняет уведомления пользователя. */
+function saveUserNotifications(username, notifications) {
+    const all = JSON.parse(localStorage.getItem(KEYS.NOTIFICATIONS) || '{}');
+    all[username] = notifications;
+    localStorage.setItem(KEYS.NOTIFICATIONS, JSON.stringify(all));
+}
+
+/**
+ * Добавляет новое уведомление пользователю.
+ * @param {string} username
+ * @param {{ type: 'approval'|'rejection'|'reserve', message: string, eventTitle: string }} notification
+ */
+function addUserNotification(username, notification) {
+    const notifs = getUserNotifications(username);
+    notifs.unshift({
+        id:         Date.now().toString(),
+        type:       notification.type,
+        message:    notification.message,
+        eventTitle: notification.eventTitle || '',
+        timestamp:  new Date().toLocaleString('ru-RU'),
+        read:       false,
+    });
+    saveUserNotifications(username, notifs.slice(0, 100));
+}
+
+/** Помечает все уведомления пользователя как прочитанные. */
+function markNotificationsRead(username) {
+    const notifs = getUserNotifications(username);
+    notifs.forEach(n => { n.read = true; });
+    saveUserNotifications(username, notifs);
 }
 
 /* ---------- Вспомогательные проверки ---------- */
