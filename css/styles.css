@@ -2121,3 +2121,64 @@ textarea.form-input {
     .event-app-card-header { flex-direction: column; }
     .events-apps-overview  { grid-template-columns: 1fr; }
 }
+
+/* ================================================================
+   ОВЕРЛЕЙ И БЛОК МОДАЛЬНЫХ ОКОН (registration-modal, event-form-modal)
+   ================================================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+    backdrop-filter: blur(6px);
+}
+
+.modal-box {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    padding: 36px 40px;
+    width: 95%;
+    max-width: 600px;
+    box-shadow: var(--shadow-xl);
+    animation: modalIn 0.3s ease;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .modal-box { padding: 24px 20px; }
+}
+
+/* ================================================================
+   МИШКА ППОС (ШАПКА)
+   ================================================================ */
+.header-mascot {
+    position: absolute;
+    right: 60px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 8;
+    pointer-events: none;
+}
+
+.mascot-circle {
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 6px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+}
+
+.mascot-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (max-width: 1100px) {
+    .header-mascot { display: none; }
+}

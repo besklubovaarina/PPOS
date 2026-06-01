@@ -159,11 +159,13 @@ function updateUIForAuth() {
     logoutBtn.style.display = loggedIn ? 'inline-block' : 'none';
 
     // Кнопки навигации — только для авторизованных
-    const navInstituteBtn = document.getElementById('nav-institute-btn');
-    const navAdminBtn     = document.getElementById('nav-admin-btn');
+    const navInstituteBtn  = document.getElementById('nav-institute-btn');
+    const navAdminBtn      = document.getElementById('nav-admin-btn');
+    const navMyEventsBtn   = document.getElementById('nav-my-events-btn');
 
     if (navInstituteBtn) navInstituteBtn.style.display = loggedIn ? 'inline-block' : 'none';
     if (navAdminBtn)     navAdminBtn.style.display     = admin     ? 'inline-block' : 'none';
+    if (navMyEventsBtn)  navMyEventsBtn.style.display  = loggedIn  ? 'inline-block' : 'none';
 
     // Кнопки редактирования (только для admin)
     const editBtns = document.querySelectorAll('.edit-btn-admin');
@@ -177,6 +179,7 @@ function updateUIForAuth() {
 
     // Перерендериваем основные секции
     renderAllEvents();
+    renderMyEventsSection();
     renderInstituteGroupsSection();
 
     if (admin) {
