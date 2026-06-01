@@ -9,6 +9,14 @@ let isEditingEvents          = false;
 let currentSearchQuery       = '';
 let currentTypeFilter        = 'all';
 let currentRegistrationEventId = null; // ID мероприятия, на которое сейчас открыта форма
+let adminEventAttachments    = [];
+
+function _parseDate(s) {
+    if (!s) return 0;
+    const m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]).getTime();
+    return 0;
+}
 
 /* ================================================================
    ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -233,6 +241,8 @@ function renderAllEvents() {
         events = events.filter(e => e.type === currentTypeFilter);
     }
 
+    events = events.sort((a, b) => _parseDate(a.date) - _parseDate(b.date));
+
     let html = '';
     if (events.length === 0) {
         html = '<p class="empty-state">Мероприятия не найдены</p>';
@@ -318,6 +328,16 @@ function openRegistrationModal(eventId) {
         <span class="reg-meta-item">Дата: ${escapeHTML(event.date)}</span>
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
+
+    // Блок выбора роли (только для активистов и председателей)
+    const roleBlock = document.getElementById('reg-role-block');
+    if (roleBlock) {
+        const showRole = user.role === 'Активист профбюро' || user.role === 'Председатель';
+        roleBlock.style.display = showRole ? 'block' : 'none';
+        // Сброс радио на "participant"
+        const participantRadio = document.querySelector('input[name="reg-role"][value="participant"]');
+        if (participantRadio) participantRadio.checked = true;
+    }
 
     // Поля формы (если требуются)
     const fieldsContainer = document.getElementById('reg-form-fields');
@@ -456,13 +476,16 @@ function submitRegistration() {
         return;
     }
 
+    // Собираем выбранную роль
+    const appRole = document.querySelector('input[name="reg-role"]:checked')?.value || 'participant';
+
     // Читаем файлы, затем финализируем
     Promise.all(fileReads).then(() => {
         // Удаляем временные __file_ ключи
         Object.keys(answers).forEach(k => {
             if (k.startsWith('__file_')) delete answers[k];
         });
-        _finalizeRegistration(eventId, user, answers, event);
+        _finalizeRegistration(eventId, user, answers, event, appRole);
     });
 }
 
@@ -904,6 +927,8 @@ function renderMyEventsSection() {
     const container = document.getElementById('my-events-content');
     if (!container) return;
 
+    if (isAdmin()) { container.innerHTML = ''; return; }
+
     if (!isLoggedIn()) {
         container.innerHTML = `
             <div class="restricted-access">
@@ -924,7 +949,12 @@ function renderMyEventsSection() {
         return;
     }
 
-    container.innerHTML = myEvents.map(e => buildEventCardHTML(e, true)).join('');
+    const apps = getApplications();
+    container.innerHTML = myEvents.map(e => {
+        const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
+        const canSeeCert = e.status === 'completed' && myApp?.status === 'approved';
+        return buildEventCardHTML(e, canSeeCert);
+    }).join('');
 }
 
 /* ================================================================
@@ -1017,7 +1047,19 @@ function showCertificate(eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
-    const isOrganizer = user.role === 'Председатель' || user.role === 'Активист профбюро';
+    if (event.status !== 'completed') {
+        showNotification('Сертификат будет доступен после завершения мероприятия', 'warning');
+        return;
+    }
+
+    const apps  = getApplications();
+    const myApp = apps.find(a => a.eventId === eventId && a.username === user.username);
+    if (!myApp || myApp.status !== 'approved') {
+        showNotification('Сертификат доступен только участникам с одобренной заявкой', 'warning');
+        return;
+    }
+
+    const isOrganizer = myApp.applicationRole === 'organizer';
     const certImage   = isOrganizer
         ? 'images/certificate-organizer.png'
         : 'images/certificate-participant.png';

@@ -165,7 +165,10 @@ function updateUIForAuth() {
 
     if (navInstituteBtn) navInstituteBtn.style.display = loggedIn ? 'inline-block' : 'none';
     if (navAdminBtn)     navAdminBtn.style.display     = admin     ? 'inline-block' : 'none';
-    if (navMyEventsBtn)  navMyEventsBtn.style.display  = loggedIn  ? 'inline-block' : 'none';
+    if (navMyEventsBtn)  navMyEventsBtn.style.display  = (loggedIn && !admin) ? 'inline-block' : 'none';
+
+    const myEventsSection = document.getElementById('myEvents');
+    if (myEventsSection) myEventsSection.style.display = admin ? 'none' : '';
 
     // Кнопки редактирования (только для admin)
     const editBtns = document.querySelectorAll('.edit-btn-admin');
