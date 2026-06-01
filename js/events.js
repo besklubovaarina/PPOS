@@ -112,9 +112,11 @@ function buildEventCardHTML(event, showCertificate = false) {
     const max   = event.maxParticipants || 0;
     const full  = max > 0 && count >= max;
 
-    // ---- Кнопка записи ----
+    // ---- Кнопка записи (администратор не записывается на мероприятия) ----
     let enrollBtn = '';
-    if (loggedIn) {
+    if (admin) {
+        // admins manage events, not enroll
+    } else if (loggedIn) {
         if (isEnrolled) {
             enrollBtn = `<button class="btn-enroll enrolled" onclick="cancelEnroll('${event.id}')">Отменить запись</button>`;
         } else if (full || event.status === 'closed') {
@@ -240,8 +242,7 @@ function renderAllEvents() {
 
     if (isAdmin() && isEditingEvents) {
         html += `
-            <button class="btn-add-event"
-                    onclick="document.getElementById('add-event-form').style.display='block';this.style.display='none'">
+            <button class="btn-add-event" onclick="openAddEventModal()">
                 + Добавить мероприятие
             </button>`;
     }
@@ -270,9 +271,9 @@ function toggleEventsEdit() {
     const btn = document.getElementById('events-edit-btn');
     if (btn) btn.textContent = isEditingEvents ? 'Готово' : 'Редактировать';
 
-    const form = document.getElementById('add-event-form');
-    if (!isEditingEvents && form) {
-        form.style.display = 'none';
+    if (!isEditingEvents) {
+        const modal = document.getElementById('event-form-modal');
+        if (modal) modal.style.display = 'none';
         resetEventForm();
     }
     renderAllEvents();
@@ -358,6 +359,7 @@ function _buildRegFieldHTML(field) {
                                 id="reg-field-${field.id}"
                                 class="form-input"
                                 accept="image/*,.pdf,.doc,.docx,.ppt,.pptx"
+                                multiple
                                 style="margin-bottom:0;padding:8px;">`;
             break;
         case 'phone':
@@ -423,15 +425,19 @@ function submitRegistration() {
         if (!el) return;
 
         if (field.type === 'file') {
-            const file = el.files[0] || null;
-            answers[`__file_${field.id}`] = file; // временно
-            if (file) {
-                fileReads.push(new Promise(resolve => {
-                    const reader    = new FileReader();
-                    reader.onload   = ev => { answers[field.id] = ev.target.result; resolve(); };
-                    reader.onerror  = () => resolve();
-                    reader.readAsDataURL(file);
-                }));
+            const files = Array.from(el.files || []);
+            answers[`__file_${field.id}`] = files; // временно (для валидации)
+            if (files.length > 0) {
+                fileReads.push(
+                    Promise.all(files.map(file => new Promise(resolve => {
+                        const reader  = new FileReader();
+                        reader.onload = ev => resolve(ev.target.result);
+                        reader.onerror = () => resolve(null);
+                        reader.readAsDataURL(file);
+                    }))).then(results => {
+                        answers[field.id] = results.filter(Boolean);
+                    })
+                );
             }
         } else {
             answers[field.id] = el.value.trim();
@@ -474,7 +480,7 @@ function _validateRegistrationAnswers(event, answers) {
 
         if (field.required) {
             if (field.type === 'file') {
-                if (!fileRef) errors.push(`«${field.title}»: необходимо прикрепить файл`);
+                if (!fileRef || fileRef.length === 0) errors.push(`«${field.title}»: необходимо прикрепить файл`);
             } else if (!value) {
                 errors.push(`«${field.title}»: обязательное поле`);
             }
@@ -683,8 +689,7 @@ function openEditEventForm(eventId) {
     adminFormFields = event.formFields ? event.formFields.map(f => ({ ...f })) : [];
     toggleEventFormBuilder(requiresForm);
 
-    document.getElementById('add-event-form').style.display = 'block';
-    document.getElementById('add-event-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('event-form-modal').style.display = 'flex';
 }
 
 /** Сохраняет новое или изменённое мероприятие. */
@@ -756,9 +761,10 @@ function addEvent() {
     renderAllEvents();
 }
 
-/** Отменяет добавление/редактирование мероприятия, сбрасывает форму. */
+/** Закрывает модал создания/редактирования мероприятия, сбрасывает форму. */
 function cancelAddEvent() {
-    document.getElementById('add-event-form').style.display = 'none';
+    const modal = document.getElementById('event-form-modal');
+    if (modal) modal.style.display = 'none';
     resetEventForm();
     renderAllEvents();
 }
@@ -835,8 +841,7 @@ function renderFormBuilder() {
                         <option value="text"     ${field.type === 'text'     ? 'selected' : ''}>Текст (одна строка)</option>
                         <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Текст (абзац)</option>
                         <option value="url"      ${field.type === 'url'      ? 'selected' : ''}>Ссылка (URL)</option>
-                        <option value="phone"    ${field.type === 'phone'    ? 'selected' : ''}>Номер телефона</option>
-                        <option value="file"     ${field.type === 'file'     ? 'selected' : ''}>Прикрепить файл</option>
+                        <option value="file"     ${field.type === 'file'     ? 'selected' : ''}>Прикрепить файл(ы)</option>
                     </select>
                 </div>
             </div>
@@ -884,6 +889,42 @@ function removeFormField(fieldId) {
 function updateFormField(fieldId, property, value) {
     const field = adminFormFields.find(f => f.id === fieldId);
     if (field) field[property] = value;
+}
+
+/** Открывает модал для добавления нового мероприятия. */
+function openAddEventModal() {
+    resetEventForm();
+    document.getElementById('event-form-modal').style.display = 'flex';
+}
+
+/* ================================================================
+   СЕКЦИЯ «МОИ МЕРОПРИЯТИЯ» (главная страница)
+   ================================================================ */
+function renderMyEventsSection() {
+    const container = document.getElementById('my-events-content');
+    if (!container) return;
+
+    if (!isLoggedIn()) {
+        container.innerHTML = `
+            <div class="restricted-access">
+                <span class="lock-icon">🔒</span>
+                <p>Для просмотра ваших мероприятий необходимо войти в личный кабинет</p>
+                <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
+            </div>`;
+        return;
+    }
+
+    const user        = getCurrentUser();
+    const enrolledIds = user.enrolledEvents || [];
+    const allEvents   = getEventsFromStorage() || DEFAULT_EVENTS;
+    const myEvents    = allEvents.filter(e => enrolledIds.includes(e.id));
+
+    if (myEvents.length === 0) {
+        container.innerHTML = '<p class="empty-state">Вы пока не записаны ни на одно мероприятие</p>';
+        return;
+    }
+
+    container.innerHTML = myEvents.map(e => buildEventCardHTML(e, true)).join('');
 }
 
 /* ================================================================
