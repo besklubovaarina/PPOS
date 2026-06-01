@@ -1543,20 +1543,62 @@ textarea.form-input {
 /* ================================================================
    ПОДВАЛ
    ================================================================ */
+/* ================================================================
+   ПОЛЕЗНЫЕ ССЫЛКИ
+   ================================================================ */
+.useful-links-section {
+    padding-top: 10px;
+}
+
+.useful-links-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.useful-link-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 22px 26px;
+    background: var(--white);
+    border: 2px solid var(--blue-light);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.useful-link-card:hover {
+    border-color: var(--blue-main);
+    box-shadow: 0 4px 18px rgba(6,69,145,0.12);
+    transform: translateY(-2px);
+}
+
+.useful-link-title {
+    color: var(--blue-dark);
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.useful-link-url {
+    color: var(--blue-main);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* ================================================================
+   ПОДВАЛ
+   ================================================================ */
 .footer {
     background: var(--white);
     border-radius: var(--radius-xl);
-    padding: 50px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
-    align-items: start;
+    padding: 40px 50px;
 }
 
 .footer-column h3 {
     color: var(--blue-dark);
-    font-size: 28px;
-    margin-bottom: 22px;
+    font-size: 22px;
+    margin-bottom: 16px;
     font-weight: 700;
 }
 
@@ -1564,15 +1606,10 @@ textarea.form-input {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     color: var(--blue-mid);
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 500;
-}
-
-.footer-icon {
-    font-size: 22px;
-    flex-shrink: 0;
 }
 
 /* ================================================================
@@ -1645,7 +1682,7 @@ textarea.form-input {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     .header-content { max-width: 100%; }
     .header-decoration { display: none; }
-    .footer { grid-template-columns: 1fr; }
+    .useful-links-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 900px) {
@@ -1730,4 +1767,5 @@ textarea.form-input {
     .btn-enroll { font-size: 15px; padding: 11px 18px; }
     .event-details h3 { font-size: 20px; }
     .stats-grid { grid-template-columns: 1fr; }
+    .useful-links-grid { grid-template-columns: 1fr; }
 }
