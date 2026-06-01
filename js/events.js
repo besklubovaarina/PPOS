@@ -9,6 +9,80 @@ let isEditingEvents          = false;
 let currentSearchQuery       = '';
 let currentTypeFilter        = 'all';
 let currentRegistrationEventId = null; // ID мероприятия, на которое сейчас открыта форма
+let adminEventAttachments    = [];
+
+function _parseDate(s) {
+    if (!s) return 0;
+    const m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (m) return new Date(+m[3], +m[2]-1, +m[1]).getTime();
+    return 0;
+}
+
+/* ================================================================
+   ПРИКРЕПЛЁННЫЕ ФАЙЛЫ К МЕРОПРИЯТИЮ
+   ================================================================ */
+
+/** Рендерит список прикреплённых файлов в форме мероприятия. */
+function renderEventAttachmentsList() {
+    const container = document.getElementById('event-attachments-list');
+    if (!container) return;
+    if (adminEventAttachments.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = adminEventAttachments.map(f => `
+        <div style="display:flex;align-items:center;gap:10px;background:#f0f7ff;border-radius:10px;padding:8px 14px;margin-bottom:6px;border:1px solid #bfdef3;">
+            <span style="flex:1;font-size:14px;color:#033b7c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                📎 ${escapeHTML(f.name)}
+            </span>
+            <button type="button" onclick="removeEventAttachment('${f.id}')"
+                    style="flex:0 0 auto;background:none;border:none;color:#dc2626;cursor:pointer;font-size:18px;padding:0 4px;"
+                    title="Удалить">✕</button>
+        </div>`).join('');
+}
+
+/** Читает файлы из input и добавляет в adminEventAttachments. */
+function handleEventAttachmentsAdd(input) {
+    const files = Array.from(input.files || []);
+    if (files.length === 0) return;
+    const reads = files.map(file => new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+            adminEventAttachments.push({
+                id:   Date.now().toString() + Math.random().toString(36).slice(2),
+                name: file.name,
+                data: ev.target.result,
+                type: file.type,
+            });
+            resolve();
+        };
+        reader.onerror = () => resolve();
+        reader.readAsDataURL(file);
+    }));
+    Promise.all(reads).then(() => {
+        renderEventAttachmentsList();
+        input.value = '';
+    });
+}
+
+/** Удаляет прикреплённый файл по id. */
+function removeEventAttachment(id) {
+    adminEventAttachments = adminEventAttachments.filter(f => f.id !== id);
+    renderEventAttachmentsList();
+}
+
+/** Скачивает прикреплённый файл из данных мероприятия. */
+function downloadEventAttachment(eventId, fileId) {
+    const events = getEventsFromStorage() || [];
+    const event  = events.find(e => e.id === eventId);
+    if (!event || !event.attachments) return;
+    const file = event.attachments.find(f => f.id === fileId);
+    if (!file || !file.data) return;
+    const a = document.createElement('a');
+    a.href     = file.data;
+    a.download = file.name;
+    a.click();
+}
 
 /* ================================================================
    ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -233,6 +307,8 @@ function renderAllEvents() {
         events = events.filter(e => e.type === currentTypeFilter);
     }
 
+    events = events.sort((a, b) => _parseDate(a.date) - _parseDate(b.date));
+
     let html = '';
     if (events.length === 0) {
         html = '<p class="empty-state">Мероприятия не найдены</p>';
@@ -318,6 +394,16 @@ function openRegistrationModal(eventId) {
         <span class="reg-meta-item">Дата: ${escapeHTML(event.date)}</span>
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
+
+    // Блок выбора роли (только для активистов и председателей)
+    const roleBlock = document.getElementById('reg-role-block');
+    if (roleBlock) {
+        const showRole = user.role === 'Активист профбюро' || user.role === 'Председатель';
+        roleBlock.style.display = showRole ? 'block' : 'none';
+        // Сброс радио на "participant"
+        const participantRadio = document.querySelector('input[name="reg-role"][value="participant"]');
+        if (participantRadio) participantRadio.checked = true;
+    }
 
     // Поля формы (если требуются)
     const fieldsContainer = document.getElementById('reg-form-fields');
@@ -456,13 +542,16 @@ function submitRegistration() {
         return;
     }
 
+    // Собираем выбранную роль
+    const appRole = document.querySelector('input[name="reg-role"]:checked')?.value || 'participant';
+
     // Читаем файлы, затем финализируем
     Promise.all(fileReads).then(() => {
         // Удаляем временные __file_ ключи
         Object.keys(answers).forEach(k => {
             if (k.startsWith('__file_')) delete answers[k];
         });
-        _finalizeRegistration(eventId, user, answers, event);
+        _finalizeRegistration(eventId, user, answers, event, appRole);
     });
 }
 
@@ -520,7 +609,7 @@ function _showRegErrors(errors) {
 }
 
 /** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
-function _finalizeRegistration(eventId, user, answers, event) {
+function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
     // Повторная проверка лимита (за время читатели FileReader могли успеть)
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
@@ -542,15 +631,16 @@ function _finalizeRegistration(eventId, user, answers, event) {
     // Создаём заявку
     const apps = getApplications();
     apps.push({
-        id:           Date.now().toString(),
-        username:     user.username,
-        fullName:     user.fullName,
+        id:              Date.now().toString(),
+        username:        user.username,
+        fullName:        user.fullName,
         eventId,
-        date:         new Date().toLocaleDateString('ru-RU'),
-        timestamp:    new Date().toISOString(),
-        status:       'pending',
-        consentGiven: true,
+        date:            new Date().toLocaleDateString('ru-RU'),
+        timestamp:       new Date().toISOString(),
+        status:          'pending',
+        consentGiven:    true,
         answers,
+        applicationRole: appRole,
     });
     saveApplications(apps);
 
@@ -689,6 +779,16 @@ function openEditEventForm(eventId) {
     adminFormFields = event.formFields ? event.formFields.map(f => ({ ...f })) : [];
     toggleEventFormBuilder(requiresForm);
 
+    // Восстанавливаем прикреплённые файлы
+    adminEventAttachments = (event.attachments || []).map(f => ({ ...f }));
+    renderEventAttachmentsList();
+
+    // Показываем секцию статуса и задаём значение
+    const statusSection = document.getElementById('event-status-section');
+    if (statusSection) statusSection.style.display = 'block';
+    const statusEl = document.getElementById('new-event-status');
+    if (statusEl) statusEl.value = event.status || 'open';
+
     document.getElementById('event-form-modal').style.display = 'flex';
 }
 
@@ -722,6 +822,7 @@ function addEvent() {
 
     if (currentEditEventId) {
         // Режим редактирования
+        const status = document.getElementById('new-event-status')?.value || 'open';
         const idx = events.findIndex(e => e.id === currentEditEventId);
         if (idx !== -1) {
             events[idx] = {
@@ -735,6 +836,8 @@ function addEvent() {
                 reserveCount:    reserve,
                 requiresForm:    needsForm,
                 formFields,
+                status,
+                attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
         }
         showNotification('Мероприятие обновлено', 'success');
@@ -752,6 +855,7 @@ function addEvent() {
             requiresForm:    needsForm,
             formFields,
             status:          'open',
+            attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
     }
@@ -791,6 +895,16 @@ function resetEventForm() {
     if (submitEl) submitEl.textContent = 'Добавить мероприятие';
 
     toggleEventFormBuilder(false);
+
+    // Сброс прикреплённых файлов
+    adminEventAttachments = [];
+    renderEventAttachmentsList();
+
+    // Скрываем и сбрасываем секцию статуса
+    const statusSection = document.getElementById('event-status-section');
+    if (statusSection) statusSection.style.display = 'none';
+    const statusEl = document.getElementById('new-event-status');
+    if (statusEl) statusEl.value = 'open';
 }
 
 /* ================================================================
@@ -904,6 +1018,8 @@ function renderMyEventsSection() {
     const container = document.getElementById('my-events-content');
     if (!container) return;
 
+    if (isAdmin()) { container.innerHTML = ''; return; }
+
     if (!isLoggedIn()) {
         container.innerHTML = `
             <div class="restricted-access">
@@ -924,7 +1040,12 @@ function renderMyEventsSection() {
         return;
     }
 
-    container.innerHTML = myEvents.map(e => buildEventCardHTML(e, true)).join('');
+    const apps = getApplications();
+    container.innerHTML = myEvents.map(e => {
+        const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
+        const canSeeCert = e.status === 'completed' && myApp?.status === 'approved';
+        return buildEventCardHTML(e, canSeeCert);
+    }).join('');
 }
 
 /* ================================================================
@@ -967,6 +1088,17 @@ function showEventDescription(eventId) {
            }</ul>`
         : '';
 
+    const attachHtml = event.attachments?.length > 0 ? `
+        <hr style="border:none;border-top:2px solid #e5e7eb;margin:18px 0;">
+        <p style="font-weight:700;color:#033b7c;margin-bottom:10px;">Прикреплённые материалы:</p>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+            ${event.attachments.map(f => `
+                <button class="btn-file-dl" style="text-align:left;padding:8px 14px;font-size:14px;"
+                        onclick="downloadEventAttachment('${event.id}','${f.id}')">
+                    📎 ${escapeHTML(f.name)}
+                </button>`).join('')}
+        </div>` : '';
+
     document.getElementById('modal-description').innerHTML = `
         <p style="font-size:16px;color:#6b7280;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">
             ${getTypeLabel(event.type)}
@@ -997,7 +1129,8 @@ function showEventDescription(eventId) {
         <p style="line-height:1.8;color:#163a6f;font-size:17px;">
             ${escapeHTML(event.description) || 'Описание не указано'}
         </p>
-        ${fieldsInfo}`;
+        ${fieldsInfo}
+        ${attachHtml}`;
 
     document.getElementById('description-modal').style.display = 'flex';
 }
@@ -1017,7 +1150,19 @@ function showCertificate(eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
-    const isOrganizer = user.role === 'Председатель' || user.role === 'Активист профбюро';
+    if (event.status !== 'completed') {
+        showNotification('Сертификат будет доступен после завершения мероприятия', 'warning');
+        return;
+    }
+
+    const apps  = getApplications();
+    const myApp = apps.find(a => a.eventId === eventId && a.username === user.username);
+    if (!myApp || myApp.status !== 'approved') {
+        showNotification('Сертификат доступен только участникам с одобренной заявкой', 'warning');
+        return;
+    }
+
+    const isOrganizer = myApp.applicationRole === 'organizer';
     const certImage   = isOrganizer
         ? 'images/certificate-organizer.png'
         : 'images/certificate-participant.png';

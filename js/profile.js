@@ -23,17 +23,24 @@ function openProfileModal() {
     const avatarEl = document.getElementById('profile-avatar-preview');
     avatarEl.src   = user.avatarDataUrl || 'images/default-avatar.png';
 
-    // Статус документов
-    renderDocumentStatuses(user);
-
-    // Мои мероприятия
-    renderMyEventsInProfile();
-
-    // Моя группа
-    renderGroupInProfile();
-
     document.getElementById('profile-modal').style.display = 'flex';
-    switchProfileTab('info');
+
+    if (isAdmin()) {
+        ['my-events', 'my-group', 'documents'].forEach(t => {
+            const btn = document.getElementById('profile-tab-' + t);
+            if (btn) btn.style.display = 'none';
+        });
+        switchProfileTab('info');
+    } else {
+        ['my-events', 'my-group', 'documents'].forEach(t => {
+            const btn = document.getElementById('profile-tab-' + t);
+            if (btn) btn.style.display = '';
+        });
+        renderDocumentStatuses(user);
+        renderMyEventsInProfile();
+        renderGroupInProfile();
+        switchProfileTab('info');
+    }
 }
 
 function closeProfileModal() {
@@ -72,14 +79,22 @@ function renderMyEventsInProfile() {
         return;
     }
 
+    const apps = getApplications();
     const html = myEvents.map(event => {
-        const count = getParticipantsCount(event.id);
-        const apps  = getApplications();
         const myApp = apps.find(a => a.eventId === event.id && a.username === user.username);
         const statusBadge = myApp
             ? `<span class="status-badge badge-${myApp.status === 'approved' ? 'approved' : myApp.status === 'rejected' ? 'rejected' : 'pending'}">
                 ${myApp.status === 'approved' ? 'Одобрено' : myApp.status === 'rejected' ? 'Отклонено' : 'Ожидает'}
                </span>`
+            : '';
+
+        const canSeeCert = event.status === 'completed' && myApp?.status === 'approved';
+        const certBtn = canSeeCert
+            ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
+            : '';
+        const cancelBtn = event.status !== 'completed'
+            ? `<button class="btn-cancel" style="padding:10px 18px;font-size:15px;border-radius:25px;"
+                       onclick="cancelEnroll('${event.id}');closeProfileModal();">Отменить</button>`
             : '';
 
         return `
@@ -90,9 +105,8 @@ function renderMyEventsInProfile() {
                     <div style="margin-top:8px;">${statusBadge}</div>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>
-                    <button class="btn-cancel" style="padding:10px 18px;font-size:15px;border-radius:25px;"
-                            onclick="toggleEnroll('${event.id}');closeProfileModal();">Отменить</button>
+                    ${certBtn}
+                    ${cancelBtn}
                 </div>
             </div>`;
     }).join('');

@@ -148,14 +148,12 @@ function renderAdminUsers(container) {
                     <th>Группа</th>
                     <th>Роль</th>
                     <th>Мероприятий</th>
-                    <th>Документы</th>
                     <th>Действия</th>
                 </tr>
             </thead>
             <tbody id="users-tbody">`;
 
     list.forEach(u => {
-        const docsCount = Object.keys(u.documents || {}).length;
         const roleClass = u.isAdmin
             ? 'badge-admin'
             : u.role === 'Председатель'   ? 'badge-chairman'
@@ -177,10 +175,9 @@ function renderAdminUsers(container) {
                     ${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}
                 </span></td>
                 <td style="text-align:center;">${(u.enrolledEvents || []).length}</td>
-                <td style="text-align:center;">${docsCount} / 3</td>
                 <td>
                     <div class="data-table-actions">
-                        <button class="btn-approve" onclick="adminViewUser('${u.username}')">Просмотр</button>
+                        <button class="btn-approve" onclick="adminEditUser('${u.username}')">Редактировать</button>
                         ${!u.isAdmin ? `<button class="btn-reject" onclick="adminResetUser('${u.username}')">Сброс</button>` : ''}
                     </div>
                 </td>
@@ -199,60 +196,79 @@ function filterUsersTable(query) {
     });
 }
 
-function adminViewUser(username) {
+function adminEditUser(username) {
     const users = getUsers();
     const u     = users[username];
     if (!u) return;
 
-    const docsHTML = ['consent', 'accounting', 'join'].map(key => {
-        const labels = {
-            consent:    'Согласие на обработку данных',
-            accounting: 'Заявление в бухгалтерию',
-            join:       'Заявление на вступление',
-        };
-        const hasDoc = !!(u.documents && u.documents[key]);
-        return `<p style="margin:4px 0;font-size:15px;">
-            ${labels[key]}: <strong style="color:${hasDoc ? 'var(--green)' : 'var(--gray-500)'}">
-            ${hasDoc ? 'Загружен ✓' : 'Не загружен'}</strong>
-        </p>`;
-    }).join('');
-
-    const eventsFromStorage = getEventsFromStorage() || DEFAULT_EVENTS;
-    const enrolledEvents    = (u.enrolledEvents || []).map(id => {
-        const ev = eventsFromStorage.find(e => e.id === id);
-        return ev ? ev.title : id;
-    });
+    const roleSelectHTML = !u.isAdmin ? `
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:#6b7280;font-weight:600;display:block;margin-bottom:6px;">РОЛЬ</label>
+            <select id="admin-edit-role" class="form-input" style="margin-bottom:0;">
+                <option value="Студент"            ${(u.role || 'Студент') === 'Студент'            ? 'selected' : ''}>Студент</option>
+                <option value="Активист профбюро"  ${(u.role || '') === 'Активист профбюро'  ? 'selected' : ''}>Активист профбюро</option>
+                <option value="Председатель"       ${(u.role || '') === 'Председатель'       ? 'selected' : ''}>Председатель</option>
+            </select>
+        </div>` : '';
 
     document.getElementById('modal-description').innerHTML = `
         <div style="text-align:center;margin-bottom:20px;">
             <img src="${u.avatarDataUrl || 'images/default-avatar.png'}"
                  alt="Аватар"
-                 style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #163a6f;"
+                 style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #163a6f;"
                  onerror="this.src='images/default-avatar.png'">
+            <p style="margin-top:8px;font-size:15px;color:#6b7280;">Логин: <strong>${escapeHTML(u.username)}</strong></p>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ЛОГИН</p>
-                 <p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.username)}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">РОЛЬ</p>
-                 <p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ФИО</p>
-                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.fullName || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ГРУППА</p>
-                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.groupNumber || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ТЕЛЕФОН</p>
-                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.phone || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">EMAIL</p>
-                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.email || '—')}</p></div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:#6b7280;font-weight:600;display:block;margin-bottom:6px;">ФИО</label>
+            <input type="text" id="admin-edit-fullname" class="form-input" style="margin-bottom:0;"
+                   value="${escapeHTML(u.fullName || '')}">
         </div>
-        <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
-        <p style="font-weight:700;color:#033b7c;margin-bottom:8px;">Документы:</p>
-        ${docsHTML}
-        ${enrolledEvents.length > 0 ? `
-        <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
-        <p style="font-weight:700;color:#033b7c;margin-bottom:8px;">Записан на мероприятия:</p>
-        ${enrolledEvents.map(t => `<p style="font-size:15px;color:#163a6f;margin:3px 0;">• ${escapeHTML(t)}</p>`).join('')}` : ''}
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:#6b7280;font-weight:600;display:block;margin-bottom:6px;">ГРУППА</label>
+            <input type="text" id="admin-edit-group" class="form-input" style="margin-bottom:0;"
+                   value="${escapeHTML(u.groupNumber || '')}">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:#6b7280;font-weight:600;display:block;margin-bottom:6px;">ТЕЛЕФОН</label>
+            <input type="tel" id="admin-edit-phone" class="form-input" style="margin-bottom:0;"
+                   value="${escapeHTML(u.phone || '')}">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:#6b7280;font-weight:600;display:block;margin-bottom:6px;">EMAIL</label>
+            <input type="email" id="admin-edit-email" class="form-input" style="margin-bottom:0;"
+                   value="${escapeHTML(u.email || '')}">
+        </div>
+        ${roleSelectHTML}
+        <div style="display:flex;gap:12px;margin-top:20px;">
+            <button class="btn-approve" style="flex:1;" onclick="adminSaveUserEdit('${escapeHTML(username)}')">Сохранить</button>
+            <button class="btn-cancel" style="flex:1;" onclick="closeDescriptionModal()">Отмена</button>
+        </div>
     `;
     document.getElementById('description-modal').style.display = 'flex';
+}
+
+function adminSaveUserEdit(username) {
+    const users = getUsers();
+    const u     = users[username];
+    if (!u) return;
+
+    const fullName   = document.getElementById('admin-edit-fullname')?.value.trim();
+    const groupNumber= document.getElementById('admin-edit-group')?.value.trim();
+    const phone      = document.getElementById('admin-edit-phone')?.value.trim();
+    const email      = document.getElementById('admin-edit-email')?.value.trim();
+    const roleEl     = document.getElementById('admin-edit-role');
+
+    if (fullName   !== undefined) u.fullName    = fullName;
+    if (groupNumber!== undefined) u.groupNumber = groupNumber;
+    if (phone      !== undefined) u.phone       = phone;
+    if (email      !== undefined) u.email       = email;
+    if (roleEl && !u.isAdmin)     u.role        = roleEl.value;
+
+    saveUsers(users);
+    closeDescriptionModal();
+    renderAdminPanel(currentAdminTab);
+    showNotification(`Данные пользователя ${username} обновлены`, 'success');
 }
 
 function adminResetUser(username) {
@@ -341,6 +357,9 @@ function renderApplicationsOverview(container) {
                         <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
                             Word
                         </button>
+                        ${event.status !== 'completed' ? `<button class="btn-reserve" onclick="adminCompleteEvent('${event.id}')">
+                            Завершить мероприятие
+                        </button>` : `<span class="status-badge badge-approved" style="align-self:center;">Завершено</span>`}
                     </div>
                 </div>`;
         });
@@ -580,6 +599,20 @@ function rejectApplication(appId) {
     showNotification('Заявка отклонена, уведомление отправлено', 'warning');
 }
 
+function adminCompleteEvent(eventId) {
+    if (!confirm('Завершить мероприятие? После этого участникам станут доступны сертификаты.')) return;
+
+    const events = getEventsFromStorage() || [];
+    const idx    = events.findIndex(e => e.id === eventId);
+    if (idx === -1) return;
+
+    events[idx].status = 'completed';
+    saveEventsToStorage(events);
+
+    renderAdminPanel(currentAdminTab);
+    showNotification('Мероприятие завершено, сертификаты доступны участникам', 'success');
+}
+
 /* ================================================================
    ВКЛАДКА: СТАТИСТИКА
    ================================================================ */
@@ -592,8 +625,6 @@ function renderAdminStats(container) {
     const usersCount    = Object.keys(users).length - 1; // без admin
     const eventsCount   = events.length;
     const appsCount     = apps.length;
-    const approvedCount = apps.filter(a => a.status === 'approved').length;
-    const pendingCount  = pending.length;
 
     const eventPopularity = events.map(e => ({
         title: e.title,
@@ -601,11 +632,6 @@ function renderAdminStats(container) {
     })).sort((a, b) => b.count - a.count);
 
     const topEvent = eventPopularity[0];
-
-    const docsComplete = Object.values(users).filter(u => {
-        const docs = u.documents || {};
-        return Object.keys(docs).length >= 3;
-    }).length;
 
     let html = `
         <h3 style="color:#033b7c;font-size:22px;margin-bottom:24px;">Общая статистика платформы</h3>
@@ -617,14 +643,6 @@ function renderAdminStats(container) {
             <div class="stat-card">
                 <div class="stat-number">${eventsCount}</div>
                 <div class="stat-label">Мероприятий</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">${approvedCount}</div>
-                <div class="stat-label">Одобренных заявок</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" style="color:var(--amber);">${pendingCount}</div>
-                <div class="stat-label">На проверке</div>
             </div>
         </div>`;
 
@@ -661,14 +679,10 @@ function renderAdminStats(container) {
                     </span>
                 </div>`).join('')}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;">
+        <div style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:20px;">
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:20px;">
                 <p style="font-size:13px;color:#065f46;font-weight:600;text-transform:uppercase;">Всего заявок</p>
                 <p style="font-size:32px;font-weight:700;color:#065f46;">${appsCount}</p>
-            </div>
-            <div style="background:#fefce8;border:1px solid #fde047;border-radius:14px;padding:20px;">
-                <p style="font-size:13px;color:#78350f;font-weight:600;text-transform:uppercase;">Документы сданы</p>
-                <p style="font-size:32px;font-weight:700;color:#78350f;">${docsComplete}</p>
             </div>
         </div>`;
 
