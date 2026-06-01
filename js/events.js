@@ -1,22 +1,37 @@
 /**
- * events.js — Управление мероприятиями: отображение, запись, CRUD
+ * events.js — Управление мероприятиями: отображение, регистрация, CRUD
  */
 
 /* ================================================================
-   СОСТОЯНИЕ СЕКЦИИ МЕРОПРИЯТИЙ
+   СОСТОЯНИЕ
    ================================================================ */
-let isEditingEvents = false;
-let currentSearchQuery = '';
-let currentTypeFilter  = 'all';
+let isEditingEvents          = false;
+let currentSearchQuery       = '';
+let currentTypeFilter        = 'all';
+let currentRegistrationEventId = null; // ID мероприятия, на которое сейчас открыта форма
 
 /* ================================================================
    ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
    ================================================================ */
 
 /**
+ * Экранирует HTML-спецсимволы для защиты от XSS.
+ * @param {string} str
+ */
+function escapeHTML(str) {
+    if (!str && str !== 0) return '';
+    return String(str)
+        .replace(/&/g,  '&amp;')
+        .replace(/</g,  '&lt;')
+        .replace(/>/g,  '&gt;')
+        .replace(/"/g,  '&quot;')
+        .replace(/'/g,  '&#039;');
+}
+
+/**
  * Возвращает HTML-иконку мероприятия по его типу.
- * @param {string} type - 'star' | 'airplane' | 'droplet'
- * @param {string} eventId - уникальный id (нужен для linearGradient)
+ * @param {'star'|'airplane'|'droplet'} type
+ * @param {string} eventId — нужен для уникального linearGradient
  */
 function getEventIconHTML(type, eventId) {
     if (type === 'star') {
@@ -37,17 +52,15 @@ function getEventIconHTML(type, eventId) {
     if (type === 'airplane') {
         return `<img src="images/airplane-icon.png" alt="Самолёт" style="width:95px;height:95px;opacity:0.92;">`;
     }
-    // droplet по умолчанию
     return `<div class="droplet-icon"></div>`;
 }
 
 /**
- * Считает текущее число участников мероприятия из заявок.
+ * Считает число активных участников мероприятия (не отклонённых).
  * @param {string} eventId
  */
 function getParticipantsCount(eventId) {
-    const apps = getApplications();
-    return apps.filter(a => a.eventId === eventId && a.status !== 'rejected').length;
+    return getApplications().filter(a => a.eventId === eventId && a.status !== 'rejected').length;
 }
 
 /**
@@ -73,6 +86,12 @@ function getEventStatusBadge(event) {
     return `<span class="event-status-badge open">Без ограничений</span>`;
 }
 
+/** Возвращает текстовое название типа мероприятия. */
+function getTypeLabel(type) {
+    const labels = { star: 'Конкурс', airplane: 'Школа / Выезд', droplet: 'Акция' };
+    return labels[type] || 'Мероприятие';
+}
+
 /* ================================================================
    ПОСТРОЕНИЕ HTML КАРТОЧКИ МЕРОПРИЯТИЯ
    ================================================================ */
@@ -85,35 +104,55 @@ function buildEventCardHTML(event, showCertificate = false) {
         ? (user.enrolledEvents || []).includes(event.id)
         : false;
 
+    const hasReminder = loggedIn && user
+        ? (user.reminders || []).includes(event.id)
+        : false;
+
     const count = getParticipantsCount(event.id);
     const max   = event.maxParticipants || 0;
     const full  = max > 0 && count >= max;
 
-    // Кнопка записи
+    // ---- Кнопка записи ----
     let enrollBtn = '';
     if (loggedIn) {
         if (isEnrolled) {
-            enrollBtn = `<button class="btn-enroll enrolled" onclick="toggleEnroll('${event.id}')">Отменить запись</button>`;
+            enrollBtn = `<button class="btn-enroll enrolled" onclick="cancelEnroll('${event.id}')">Отменить запись</button>`;
         } else if (full || event.status === 'closed') {
             enrollBtn = `<button class="btn-enroll" disabled>Нет мест</button>`;
         } else {
-            enrollBtn = `<button class="btn-enroll" onclick="toggleEnroll('${event.id}')">Записаться</button>`;
+            enrollBtn = `<button class="btn-enroll" onclick="openRegistrationModal('${event.id}')">Записаться</button>`;
         }
     } else {
         enrollBtn = `<button class="btn-info" onclick="showLoginDialog()">Войти для записи</button>`;
     }
 
-    // Кнопка «Сертификат» (только в «Моих мероприятиях» в ЛК)
+    // ---- Кнопка «Напомнить» (только для незаписавшихся) ----
+    let reminderBtn = '';
+    if (loggedIn && !isEnrolled && event.status !== 'closed') {
+        const reminderClass = hasReminder ? 'event-reminder-btn active' : 'event-reminder-btn';
+        const reminderTitle = hasReminder ? 'Убрать напоминание' : 'Напомнить о регистрации';
+        reminderBtn = `<button class="${reminderClass}" title="${reminderTitle}"
+                               onclick="toggleReminder('${event.id}')">
+                           ${hasReminder ? '🔔' : '🔕'}
+                       </button>`;
+    }
+
+    // ---- Кнопка «Сертификат» (только в «Моих мероприятиях») ----
     const certBtn = showCertificate
-        ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">🏆 Сертификат</button>`
+        ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
         : '';
 
-    // Кнопка удаления (только для admin в режиме редактирования)
-    const deleteBtn = (admin && isEditingEvents)
-        ? `<button class="btn-info" style="background:rgba(239,68,68,0.7);border-color:rgba(239,68,68,0.8);" onclick="confirmDeleteEvent('${event.id}')">Удалить</button>`
+    // ---- Кнопки администратора в режиме редактирования ----
+    const adminEditBtns = (admin && isEditingEvents)
+        ? `<button class="btn-info"
+                   style="background:rgba(6,69,145,0.6);border-color:rgba(6,69,145,0.7);"
+                   onclick="openEditEventForm('${event.id}')">Изменить</button>
+           <button class="btn-info"
+                   style="background:rgba(239,68,68,0.7);border-color:rgba(239,68,68,0.8);"
+                   onclick="confirmDeleteEvent('${event.id}')">Удалить</button>`
         : '';
 
-    // Прогресс-бар участников
+    // ---- Прогресс-бар ----
     const progressBar = max > 0 ? `
         <div class="participants-bar">
             <div class="participants-bar-fill">
@@ -121,6 +160,11 @@ function buildEventCardHTML(event, showCertificate = false) {
                      style="width:${Math.min(100, Math.round(count / max * 100))}%"></div>
             </div>
         </div>` : '';
+
+    // ---- Метка «Требуется форма» ----
+    const formBadge = event.requiresForm
+        ? `<span class="event-form-badge">Нужно заполнить форму</span>`
+        : '';
 
     return `
         <div class="event-card" data-event-id="${event.id}">
@@ -151,6 +195,7 @@ function buildEventCardHTML(event, showCertificate = false) {
                             </div>` : ''}
                         </div>
                         ${getEventStatusBadge(event)}
+                        ${formBadge}
                         ${progressBar}
                     </div>
                 </div>
@@ -158,7 +203,8 @@ function buildEventCardHTML(event, showCertificate = false) {
                     <button class="btn-info" onclick="showEventDescription('${event.id}')">Подробнее</button>
                     ${certBtn}
                     ${enrollBtn}
-                    ${deleteBtn}
+                    ${reminderBtn}
+                    ${adminEditBtns}
                 </div>
             </div>
         </div>`;
@@ -171,10 +217,8 @@ function renderAllEvents() {
     const container = document.getElementById('all-events-container');
     if (!container) return;
 
-    // Получаем мероприятия из хранилища
     let events = getEventsFromStorage() || DEFAULT_EVENTS;
 
-    // Фильтрация по поиску
     if (currentSearchQuery) {
         const q = currentSearchQuery.toLowerCase();
         events = events.filter(e =>
@@ -183,20 +227,17 @@ function renderAllEvents() {
         );
     }
 
-    // Фильтрация по типу
     if (currentTypeFilter !== 'all') {
         events = events.filter(e => e.type === currentTypeFilter);
     }
 
     let html = '';
-
     if (events.length === 0) {
         html = '<p class="empty-state">Мероприятия не найдены</p>';
     } else {
         html = events.map(e => buildEventCardHTML(e)).join('');
     }
 
-    // Кнопка «Добавить мероприятие» (admin, режим редактирования)
     if (isAdmin() && isEditingEvents) {
         html += `
             <button class="btn-add-event"
@@ -209,7 +250,7 @@ function renderAllEvents() {
 }
 
 /* ================================================================
-   ПРИМЕНЕНИЕ ФИЛЬТРОВ
+   ФИЛЬТРАЦИЯ
    ================================================================ */
 function applyEventsSearch() {
     currentSearchQuery = document.getElementById('events-search')?.value?.trim() || '';
@@ -229,63 +270,620 @@ function toggleEventsEdit() {
     const btn = document.getElementById('events-edit-btn');
     if (btn) btn.textContent = isEditingEvents ? 'Готово' : 'Редактировать';
 
-    // Прячем форму при выходе из режима редактирования
     const form = document.getElementById('add-event-form');
-    if (!isEditingEvents && form) form.style.display = 'none';
-
+    if (!isEditingEvents && form) {
+        form.style.display = 'none';
+        resetEventForm();
+    }
     renderAllEvents();
 }
 
 /* ================================================================
-   ДОБАВЛЕНИЕ МЕРОПРИЯТИЯ
+   МОДАЛЬНОЕ ОКНО РЕГИСТРАЦИИ НА МЕРОПРИЯТИЕ
    ================================================================ */
+
+/**
+ * Открывает форму регистрации на мероприятие.
+ * Если мероприятие не требует формы — только согласие.
+ * @param {string} eventId
+ */
+function openRegistrationModal(eventId) {
+    if (!isLoggedIn()) { showLoginDialog(); return; }
+
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    // Проверяем: вдруг уже записан
+    const user = getCurrentUser();
+    if ((user.enrolledEvents || []).includes(eventId)) {
+        showNotification('Вы уже записаны на это мероприятие', '');
+        return;
+    }
+
+    // Проверяем лимит
+    const count = getParticipantsCount(eventId);
+    const max   = event.maxParticipants || 0;
+    if (max > 0 && count >= max) {
+        showNotification('К сожалению, мест больше нет', 'error');
+        return;
+    }
+
+    currentRegistrationEventId = eventId;
+
+    // Заголовок и мета-информация
+    document.getElementById('reg-event-title').textContent = event.title;
+    document.getElementById('reg-event-meta').innerHTML = `
+        <span class="reg-meta-item">Дата: ${escapeHTML(event.date)}</span>
+        <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
+        ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
+
+    // Поля формы (если требуются)
+    const fieldsContainer = document.getElementById('reg-form-fields');
+    if (event.requiresForm && event.formFields && event.formFields.length > 0) {
+        fieldsContainer.innerHTML = event.formFields.map(f => _buildRegFieldHTML(f)).join('');
+        fieldsContainer.style.display = 'block';
+    } else {
+        fieldsContainer.innerHTML = '';
+        fieldsContainer.style.display = 'none';
+    }
+
+    // Сброс ошибок и галочки
+    document.getElementById('reg-consent-check').checked = false;
+    const errDiv = document.getElementById('reg-errors');
+    errDiv.style.display = 'none';
+    errDiv.innerHTML     = '';
+
+    document.getElementById('registration-modal').style.display = 'flex';
+}
+
+/** Строит HTML одного поля регистрационной формы. */
+function _buildRegFieldHTML(field) {
+    const required  = field.required ? ' <span style="color:#dc2626;">*</span>' : '';
+    const hintHTML  = field.comment
+        ? `<p class="form-hint">${escapeHTML(field.comment)}</p>`
+        : '';
+
+    let inputHTML = '';
+    switch (field.type) {
+        case 'textarea':
+            inputHTML = `<textarea id="reg-field-${field.id}"
+                                   class="form-input"
+                                   rows="3"
+                                   placeholder="${escapeHTML(field.comment || '')}"
+                                   style="margin-bottom:0;"></textarea>`;
+            break;
+        case 'file':
+            inputHTML = `<input type="file"
+                                id="reg-field-${field.id}"
+                                class="form-input"
+                                accept="image/*,.pdf,.doc,.docx,.ppt,.pptx"
+                                style="margin-bottom:0;padding:8px;">`;
+            break;
+        case 'phone':
+            inputHTML = `<input type="tel"
+                                id="reg-field-${field.id}"
+                                class="form-input"
+                                placeholder="+79001234567"
+                                style="margin-bottom:0;">`;
+            break;
+        case 'url':
+            inputHTML = `<input type="url"
+                                id="reg-field-${field.id}"
+                                class="form-input"
+                                placeholder="https://"
+                                style="margin-bottom:0;">`;
+            break;
+        default: // text
+            inputHTML = `<input type="text"
+                                id="reg-field-${field.id}"
+                                class="form-input"
+                                placeholder="${escapeHTML(field.comment || '')}"
+                                style="margin-bottom:0;">`;
+    }
+
+    return `
+        <div class="reg-form-field-group">
+            <label class="form-label" for="reg-field-${field.id}">
+                ${escapeHTML(field.title)}${required}
+            </label>
+            ${hintHTML}
+            ${inputHTML}
+        </div>`;
+}
+
+/** Закрывает модальное окно регистрации. */
+function closeRegistrationModal() {
+    document.getElementById('registration-modal').style.display = 'none';
+    currentRegistrationEventId = null;
+}
+
+/**
+ * Обрабатывает отправку регистрационной формы.
+ * Сначала собирает и валидирует данные,
+ * файловые поля читает асинхронно через FileReader.
+ */
+function submitRegistration() {
+    const eventId = currentRegistrationEventId;
+    if (!eventId) return;
+
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const user = getCurrentUser();
+    if (!user) return;
+
+    // Собираем ответы
+    const answers   = {};
+    const fileReads = []; // промисы для файловых полей
+
+    (event.formFields || []).forEach(field => {
+        const el = document.getElementById(`reg-field-${field.id}`);
+        if (!el) return;
+
+        if (field.type === 'file') {
+            const file = el.files[0] || null;
+            answers[`__file_${field.id}`] = file; // временно
+            if (file) {
+                fileReads.push(new Promise(resolve => {
+                    const reader    = new FileReader();
+                    reader.onload   = ev => { answers[field.id] = ev.target.result; resolve(); };
+                    reader.onerror  = () => resolve();
+                    reader.readAsDataURL(file);
+                }));
+            }
+        } else {
+            answers[field.id] = el.value.trim();
+        }
+    });
+
+    // Синхронная проверка (без файлов)
+    const syncErrors = _validateRegistrationAnswers(event, answers);
+    const consentOk  = document.getElementById('reg-consent-check')?.checked;
+    if (!consentOk) {
+        syncErrors.push('Необходимо дать согласие на обработку персональных данных');
+    }
+
+    if (syncErrors.length > 0) {
+        _showRegErrors(syncErrors);
+        return;
+    }
+
+    // Читаем файлы, затем финализируем
+    Promise.all(fileReads).then(() => {
+        // Удаляем временные __file_ ключи
+        Object.keys(answers).forEach(k => {
+            if (k.startsWith('__file_')) delete answers[k];
+        });
+        _finalizeRegistration(eventId, user, answers, event);
+    });
+}
+
+/**
+ * Валидирует ответы на форму регистрации.
+ * @returns {string[]} - массив текстов ошибок
+ */
+function _validateRegistrationAnswers(event, answers) {
+    const errors = [];
+    if (!event.requiresForm || !event.formFields) return errors;
+
+    event.formFields.forEach(field => {
+        const value    = answers[field.id] || '';
+        const fileRef  = answers[`__file_${field.id}`];
+
+        if (field.required) {
+            if (field.type === 'file') {
+                if (!fileRef) errors.push(`«${field.title}»: необходимо прикрепить файл`);
+            } else if (!value) {
+                errors.push(`«${field.title}»: обязательное поле`);
+            }
+        }
+
+        if (value) {
+            if (field.type === 'phone') {
+                const digits = value.replace(/\D/g, '');
+                if (digits.length < 10 || digits.length > 11) {
+                    errors.push(`«${field.title}»: неверный формат телефона — нужно 10–11 цифр (сейчас ${digits.length})`);
+                }
+            }
+            if (field.type === 'url') {
+                const startsCorrect = value.startsWith('http://') || value.startsWith('https://');
+                if (!startsCorrect) {
+                    errors.push(`«${field.title}»: ссылка должна начинаться с http:// или https://`);
+                }
+            }
+        }
+    });
+
+    return errors;
+}
+
+/** Показывает список ошибок внутри модала регистрации. */
+function _showRegErrors(errors) {
+    const errDiv = document.getElementById('reg-errors');
+    errDiv.style.display = 'block';
+    errDiv.innerHTML = `
+        <p style="font-weight:700;color:#dc2626;margin-bottom:8px;">
+            Исправьте ошибки перед подачей заявки:
+        </p>
+        <ul style="margin:0;padding-left:20px;">
+            ${errors.map(e => `<li style="color:#dc2626;font-size:15px;margin:3px 0;">${escapeHTML(e)}</li>`).join('')}
+        </ul>`;
+    errDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
+function _finalizeRegistration(eventId, user, answers, event) {
+    // Повторная проверка лимита (за время читатели FileReader могли успеть)
+    const count = getParticipantsCount(eventId);
+    const max   = event.maxParticipants || 0;
+    if (max > 0 && count >= max) {
+        showNotification('К сожалению, мест больше нет', 'error');
+        closeRegistrationModal();
+        return;
+    }
+
+    // Добавляем в список мероприятий пользователя
+    if (!user.enrolledEvents) user.enrolledEvents = [];
+    user.enrolledEvents.push(eventId);
+
+    // Убираем из напоминаний
+    if (user.reminders) {
+        user.reminders = user.reminders.filter(id => id !== eventId);
+    }
+
+    // Создаём заявку
+    const apps = getApplications();
+    apps.push({
+        id:           Date.now().toString(),
+        username:     user.username,
+        fullName:     user.fullName,
+        eventId,
+        date:         new Date().toLocaleDateString('ru-RU'),
+        timestamp:    new Date().toISOString(),
+        status:       'pending',
+        consentGiven: true,
+        answers,
+    });
+    saveApplications(apps);
+
+    // Обновляем сессию и хранилище пользователей
+    setCurrentUser(user);
+    const users = getUsers();
+    if (users[user.username]) {
+        users[user.username].enrolledEvents = user.enrolledEvents;
+        if (user.reminders !== undefined) users[user.username].reminders = user.reminders;
+        saveUsers(users);
+    }
+
+    closeRegistrationModal();
+    renderAllEvents();
+    showNotification('Заявка подана! Ожидайте подтверждения администратора', 'success');
+}
+
+/* ================================================================
+   ОТМЕНА ЗАПИСИ (без формы — прямое действие)
+   ================================================================ */
+function cancelEnroll(eventId) {
+    if (!isLoggedIn()) return;
+    if (!confirm('Отменить запись на это мероприятие?')) return;
+
+    const user = getCurrentUser();
+    user.enrolledEvents = (user.enrolledEvents || []).filter(id => id !== eventId);
+
+    // Удаляем pending / reserve заявку (approved оставляем — информация для admin)
+    let apps = getApplications();
+    apps = apps.filter(a => !(
+        a.eventId === eventId &&
+        a.username === user.username &&
+        (a.status === 'pending' || a.status === 'reserve')
+    ));
+    saveApplications(apps);
+
+    setCurrentUser(user);
+    const users = getUsers();
+    if (users[user.username]) {
+        users[user.username].enrolledEvents = user.enrolledEvents;
+        saveUsers(users);
+    }
+
+    renderAllEvents();
+    showNotification('Запись отменена', 'warning');
+}
+
+/* ================================================================
+   НАПОМИНАНИЯ
+   ================================================================ */
+
+/**
+ * Переключает напоминание о мероприятии.
+ * Если напоминание уже есть — убирает. Если нет — добавляет.
+ * @param {string} eventId
+ */
+function toggleReminder(eventId) {
+    if (!isLoggedIn()) { showLoginDialog(); return; }
+
+    const user = getCurrentUser();
+    if (!user.reminders) user.reminders = [];
+
+    const has = user.reminders.includes(eventId);
+    if (has) {
+        user.reminders = user.reminders.filter(id => id !== eventId);
+        showNotification('Напоминание убрано', 'warning');
+    } else {
+        user.reminders.push(eventId);
+        showNotification('Напоминание установлено — уведомим о регистрации', 'success');
+    }
+
+    setCurrentUser(user);
+    const users = getUsers();
+    if (users[user.username]) {
+        users[user.username].reminders = user.reminders;
+        saveUsers(users);
+    }
+
+    renderAllEvents();
+}
+
+/**
+ * Проверяет напоминания текущего пользователя и показывает уведомления.
+ * Вызывается при входе и при инициализации.
+ */
+function checkAndShowReminders() {
+    const user = getCurrentUser();
+    if (!user || !user.reminders || user.reminders.length === 0) return;
+
+    const events   = getEventsFromStorage() || DEFAULT_EVENTS;
+    const enrolled = user.enrolledEvents || [];
+
+    const remind = user.reminders
+        .map(id => events.find(e => e.id === id))
+        .filter(e => e && e.status !== 'closed' && !enrolled.includes(e.id));
+
+    if (remind.length === 0) return;
+
+    setTimeout(() => {
+        remind.forEach((ev, idx) => {
+            setTimeout(() => {
+                showNotification(`Напоминание: не забудьте записаться на «${ev.title}»!`, 'warning');
+            }, idx * 1100);
+        });
+    }, 600);
+}
+
+/* ================================================================
+   ДОБАВЛЕНИЕ / РЕДАКТИРОВАНИЕ МЕРОПРИЯТИЯ (ADMIN)
+   ================================================================ */
+
+let currentEditEventId = null; // null = режим добавления, строка = редактирование
+
+/** Открывает форму для редактирования существующего мероприятия. */
+function openEditEventForm(eventId) {
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    currentEditEventId = eventId;
+
+    document.getElementById('event-form-title').textContent       = 'Редактировать мероприятие';
+    document.getElementById('event-form-submit-btn').textContent   = 'Сохранить изменения';
+    document.getElementById('new-event-title').value               = event.title       || '';
+    document.getElementById('new-event-date').value                = event.date        || '';
+    document.getElementById('new-event-time').value                = event.time        || '';
+    document.getElementById('new-event-type').value                = event.type        || 'star';
+    document.getElementById('new-event-max').value                 = event.maxParticipants || 0;
+    document.getElementById('new-event-reserve').value             = event.reserveCount    || 0;
+    document.getElementById('new-event-description').value         = event.description  || '';
+
+    const requiresForm = !!(event.requiresForm && event.formFields?.length > 0);
+    document.getElementById('new-event-requires-form').checked     = requiresForm;
+
+    // Восстанавливаем поля формы
+    adminFormFields = event.formFields ? event.formFields.map(f => ({ ...f })) : [];
+    toggleEventFormBuilder(requiresForm);
+
+    document.getElementById('add-event-form').style.display = 'block';
+    document.getElementById('add-event-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Сохраняет новое или изменённое мероприятие. */
 function addEvent() {
-    const title = document.getElementById('new-event-title')?.value.trim();
-    const date  = document.getElementById('new-event-date')?.value.trim();
-    const time  = document.getElementById('new-event-time')?.value.trim();
-    const type  = document.getElementById('new-event-type')?.value || 'star';
-    const desc  = document.getElementById('new-event-description')?.value.trim() || '';
-    const max   = parseInt(document.getElementById('new-event-max')?.value) || 0;
+    const title       = document.getElementById('new-event-title')?.value.trim();
+    const date        = document.getElementById('new-event-date')?.value.trim();
+    const time        = document.getElementById('new-event-time')?.value.trim();
+    const type        = document.getElementById('new-event-type')?.value           || 'star';
+    const desc        = document.getElementById('new-event-description')?.value.trim() || '';
+    const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
+    const reserve     = parseInt(document.getElementById('new-event-reserve')?.value) || 0;
+    const needsForm   = document.getElementById('new-event-requires-form')?.checked || false;
 
     if (!title) { showNotification('Введите название мероприятия', 'error'); return; }
     if (!date)  { showNotification('Введите дату мероприятия', 'error'); return; }
     if (!time)  { showNotification('Введите время мероприятия', 'error'); return; }
 
+    if (needsForm) {
+        for (const field of adminFormFields) {
+            if (!field.title.trim()) {
+                showNotification('Укажите заголовок для каждого поля формы', 'error');
+                return;
+            }
+        }
+    }
+
+    const formFields = needsForm ? adminFormFields.map(f => ({ ...f })) : [];
+
     const events = getEventsFromStorage() || [];
-    const newEvent = {
-        id:              Date.now().toString(),
-        title,
-        date,
-        time,
-        type,
-        description:     desc,
-        maxParticipants: max,
-        status:          'open',
-        enrolledUsernames: [],
-    };
 
-    events.push(newEvent);
+    if (currentEditEventId) {
+        // Режим редактирования
+        const idx = events.findIndex(e => e.id === currentEditEventId);
+        if (idx !== -1) {
+            events[idx] = {
+                ...events[idx],
+                title,
+                date,
+                time,
+                type,
+                description:     desc,
+                maxParticipants: max,
+                reserveCount:    reserve,
+                requiresForm:    needsForm,
+                formFields,
+            };
+        }
+        showNotification('Мероприятие обновлено', 'success');
+    } else {
+        // Режим добавления
+        events.push({
+            id:              Date.now().toString(),
+            title,
+            date,
+            time,
+            type,
+            description:     desc,
+            maxParticipants: max,
+            reserveCount:    reserve,
+            requiresForm:    needsForm,
+            formFields,
+            status:          'open',
+        });
+        showNotification('Мероприятие добавлено', 'success');
+    }
+
     saveEventsToStorage(events);
-
     cancelAddEvent();
     renderAllEvents();
-    showNotification('Мероприятие добавлено', 'success');
 }
 
+/** Отменяет добавление/редактирование мероприятия, сбрасывает форму. */
 function cancelAddEvent() {
-    const form = document.getElementById('add-event-form');
-    if (form) form.style.display = 'none';
+    document.getElementById('add-event-form').style.display = 'none';
+    resetEventForm();
+    renderAllEvents();
+}
 
-    // Сброс полей формы
-    ['new-event-title', 'new-event-date', 'new-event-time',
-     'new-event-description', 'new-event-max'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
+/** Сбрасывает все поля формы мероприятия. */
+function resetEventForm() {
+    currentEditEventId = null;
+    adminFormFields    = [];
+
+    const ids = ['new-event-title', 'new-event-date', 'new-event-time',
+                 'new-event-description', 'new-event-max', 'new-event-reserve'];
+    ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+
     const typeEl = document.getElementById('new-event-type');
     if (typeEl) typeEl.value = 'star';
 
-    renderAllEvents();
+    const cbEl = document.getElementById('new-event-requires-form');
+    if (cbEl) cbEl.checked = false;
+
+    const titleEl = document.getElementById('event-form-title');
+    if (titleEl) titleEl.textContent = 'Добавить мероприятие';
+
+    const submitEl = document.getElementById('event-form-submit-btn');
+    if (submitEl) submitEl.textContent = 'Добавить мероприятие';
+
+    toggleEventFormBuilder(false);
+}
+
+/* ================================================================
+   КОНСТРУКТОР ФОРМЫ РЕГИСТРАЦИИ (поля задаёт admin)
+   ================================================================ */
+let adminFormFields = [];
+
+/** Показывает/скрывает конструктор полей при изменении чекбокса. */
+function toggleEventFormBuilder(show) {
+    const builder = document.getElementById('event-form-builder');
+    if (builder) builder.style.display = show ? 'block' : 'none';
+    if (show) renderFormBuilder();
+}
+
+/** Рендерит список полей в конструкторе. */
+function renderFormBuilder() {
+    const container = document.getElementById('form-fields-container');
+    if (!container) return;
+
+    if (adminFormFields.length === 0) {
+        container.innerHTML = '<p class="form-builder-empty">Нет полей. Нажмите «+ Добавить поле»</p>';
+        return;
+    }
+
+    container.innerHTML = adminFormFields.map((field, idx) => `
+        <div class="form-field-row">
+            <div class="form-field-row-header">
+                <span style="font-weight:700;color:#033b7c;">Поле ${idx + 1}</span>
+                <button type="button" class="field-remove-btn"
+                        onclick="removeFormField('${field.id}')">✕ Удалить поле</button>
+            </div>
+
+            <div class="form-row">
+                <div>
+                    <label class="form-label">Заголовок поля *</label>
+                    <input type="text"
+                           class="form-input"
+                           value="${escapeHTML(field.title)}"
+                           placeholder="например: Ссылка на пост ВКонтакте"
+                           oninput="updateFormField('${field.id}', 'title', this.value)"
+                           style="margin-bottom:0;">
+                </div>
+                <div>
+                    <label class="form-label">Тип поля</label>
+                    <select class="form-input"
+                            style="margin-bottom:0;"
+                            onchange="updateFormField('${field.id}', 'type', this.value)">
+                        <option value="text"     ${field.type === 'text'     ? 'selected' : ''}>Текст (одна строка)</option>
+                        <option value="textarea" ${field.type === 'textarea' ? 'selected' : ''}>Текст (абзац)</option>
+                        <option value="url"      ${field.type === 'url'      ? 'selected' : ''}>Ссылка (URL)</option>
+                        <option value="phone"    ${field.type === 'phone'    ? 'selected' : ''}>Номер телефона</option>
+                        <option value="file"     ${field.type === 'file'     ? 'selected' : ''}>Прикрепить файл</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="height:10px;"></div>
+
+            <label class="form-label">Подсказка / комментарий к полю</label>
+            <input type="text"
+                   class="form-input"
+                   value="${escapeHTML(field.comment || '')}"
+                   placeholder="Что нужно написать, какой формат ожидается..."
+                   oninput="updateFormField('${field.id}', 'comment', this.value)"
+                   style="margin-bottom:0;">
+
+            <div style="height:10px;"></div>
+            <label class="consent-label" style="font-size:15px;gap:8px;">
+                <input type="checkbox"
+                       ${field.required ? 'checked' : ''}
+                       onchange="updateFormField('${field.id}', 'required', this.checked)">
+                <span>Обязательное поле</span>
+            </label>
+        </div>`
+    ).join('<div class="form-field-divider"></div>');
+}
+
+/** Добавляет новое пустое поле в конструктор. */
+function addFormField() {
+    adminFormFields.push({
+        id:       Date.now().toString() + Math.random().toString(36).slice(2),
+        title:    '',
+        type:     'text',
+        required: true,
+        comment:  '',
+    });
+    renderFormBuilder();
+}
+
+/** Удаляет поле из конструктора по его ID. */
+function removeFormField(fieldId) {
+    adminFormFields = adminFormFields.filter(f => f.id !== fieldId);
+    renderFormBuilder();
+}
+
+/** Обновляет свойство поля в конструкторе. */
+function updateFormField(fieldId, property, value) {
+    const field = adminFormFields.find(f => f.id === fieldId);
+    if (field) field[property] = value;
 }
 
 /* ================================================================
@@ -298,7 +896,6 @@ function confirmDeleteEvent(eventId) {
     events = events.filter(e => e.id !== eventId);
     saveEventsToStorage(events);
 
-    // Удаляем связанные заявки
     let apps = getApplications();
     apps = apps.filter(a => a.eventId !== eventId);
     saveApplications(apps);
@@ -308,80 +905,26 @@ function confirmDeleteEvent(eventId) {
 }
 
 /* ================================================================
-   ЗАПИСЬ / ОТМЕНА ЗАПИСИ НА МЕРОПРИЯТИЕ
-   ================================================================ */
-function toggleEnroll(eventId) {
-    if (!isLoggedIn()) {
-        showLoginDialog();
-        return;
-    }
-
-    const user   = getCurrentUser();
-    const events = getEventsFromStorage() || [];
-    const event  = events.find(e => e.id === eventId);
-    if (!event) return;
-
-    const enrolled = (user.enrolledEvents || []).includes(eventId);
-
-    if (enrolled) {
-        // Отменяем запись
-        user.enrolledEvents = user.enrolledEvents.filter(id => id !== eventId);
-
-        // Удаляем pending-заявку из списка
-        let apps = getApplications();
-        apps = apps.filter(a => !(a.eventId === eventId && a.username === user.username && a.status === 'pending'));
-        saveApplications(apps);
-
-        showNotification('Запись отменена', 'warning');
-    } else {
-        // Проверяем лимит
-        const count = getParticipantsCount(eventId);
-        const max   = event.maxParticipants || 0;
-        if (max > 0 && count >= max) {
-            showNotification('К сожалению, мест больше нет', 'error');
-            return;
-        }
-
-        // Записываем
-        if (!user.enrolledEvents) user.enrolledEvents = [];
-        user.enrolledEvents.push(eventId);
-
-        // Создаём заявку
-        const apps = getApplications();
-        apps.push({
-            id:        Date.now().toString(),
-            username:  user.username,
-            fullName:  user.fullName,
-            eventId,
-            date:      new Date().toLocaleDateString('ru-RU'),
-            status:    'pending',
-        });
-        saveApplications(apps);
-
-        showNotification('Вы записаны! Ожидайте подтверждения', 'success');
-    }
-
-    // Обновляем сессию и хранилище пользователей
-    setCurrentUser(user);
-    const users = getUsers();
-    if (users[user.username]) {
-        users[user.username].enrolledEvents = user.enrolledEvents;
-        saveUsers(users);
-    }
-
-    renderAllEvents();
-}
-
-/* ================================================================
-   МОДАЛЬНОЕ ОКНО — ОПИСАНИЕ МЕРОПРИЯТИЯ
+   ОПИСАНИЕ МЕРОПРИЯТИЯ (модал)
    ================================================================ */
 function showEventDescription(eventId) {
-    const events = getEventsFromStorage() || [];
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
+
+    const fieldsInfo = event.requiresForm && event.formFields?.length > 0
+        ? `<hr style="border:none;border-top:2px solid #e5e7eb;margin-bottom:18px;">
+           <p style="font-weight:700;color:#033b7c;margin-bottom:10px;">Для участия нужно заполнить:</p>
+           <ul style="margin:0;padding-left:20px;">${
+               event.formFields.map(f => `<li style="font-size:15px;color:#163a6f;margin:4px 0;">
+                   ${escapeHTML(f.title)} ${f.required ? '<em style="color:#dc2626;">(обязательно)</em>' : ''}
+                   ${f.comment ? `<br><span style="font-size:13px;color:#6b7280;">${escapeHTML(f.comment)}</span>` : ''}
+               </li>`).join('')
+           }</ul>`
+        : '';
 
     document.getElementById('modal-description').innerHTML = `
         <p style="font-size:16px;color:#6b7280;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">
@@ -399,23 +942,27 @@ function showEventDescription(eventId) {
             </div>
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Участники</p>
-                <p style="font-size:18px;color:#163a6f;font-weight:600;">${max > 0 ? count + ' / ' + max : 'Без ограничений'}</p>
+                <p style="font-size:18px;color:#163a6f;font-weight:600;">
+                    ${max > 0 ? count + ' / ' + max : 'Без ограничений'}
+                </p>
             </div>
+            ${(event.reserveCount || 0) > 0 ? `
+            <div>
+                <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Резерв</p>
+                <p style="font-size:18px;color:#163a6f;font-weight:600;">${event.reserveCount} мест</p>
+            </div>` : ''}
         </div>
         <hr style="border:none;border-top:2px solid #e5e7eb;margin-bottom:20px;">
-        <p style="line-height:1.8;color:#163a6f;font-size:17px;">${escapeHTML(event.description) || 'Описание не указано'}</p>
-    `;
+        <p style="line-height:1.8;color:#163a6f;font-size:17px;">
+            ${escapeHTML(event.description) || 'Описание не указано'}
+        </p>
+        ${fieldsInfo}`;
 
     document.getElementById('description-modal').style.display = 'flex';
 }
 
 function closeDescriptionModal() {
     document.getElementById('description-modal').style.display = 'none';
-}
-
-function getTypeLabel(type) {
-    const labels = { star: 'Конкурс', airplane: 'Школа / Выезд', droplet: 'Акция' };
-    return labels[type] || 'Мероприятие';
 }
 
 /* ================================================================
@@ -425,7 +972,7 @@ function showCertificate(eventId) {
     const user = getCurrentUser();
     if (!user) return;
 
-    const events = getEventsFromStorage() || [];
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
@@ -475,43 +1022,21 @@ function printCertificate() {
             <title>Сертификат участника</title>
             <style>
                 @media print { button { display: none !important; } }
-                body {
-                    margin: 0;
-                    padding: 20px;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    min-height: 100vh;
-                    font-family: Arial, sans-serif;
-                }
-                .certificate-container {
-                    position: relative;
-                    display: inline-block;
-                    max-width: 800px;
-                    width: 100%;
-                }
-                .certificate-container img { width: 100%; border-radius: 8px; }
+                body { margin:0; padding:20px; display:flex; justify-content:center;
+                       align-items:center; min-height:100vh; font-family:Arial,sans-serif; }
+                .certificate-container { position:relative; display:inline-block;
+                                         max-width:800px; width:100%; }
+                .certificate-container img { width:100%; border-radius:8px; }
                 .cert-name-overlay {
-                    position: absolute;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    text-align: center;
-                    width: 80%;
-                    font-family: 'Times New Roman', serif;
-                    font-weight: 700;
-                    color: #1a1a1a;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    line-height: 1.3;
+                    position:absolute; left:50%; transform:translate(-50%,-50%);
+                    text-align:center; width:80%;
+                    font-family:'Times New Roman',serif; font-weight:700;
+                    color:#1a1a1a; text-transform:uppercase; letter-spacing:1px; line-height:1.3;
                 }
                 .cert-date-overlay {
-                    position: absolute;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    text-align: center;
-                    font-family: 'Times New Roman', serif;
-                    color: #333;
-                    letter-spacing: 2px;
+                    position:absolute; left:50%; transform:translateX(-50%);
+                    text-align:center; font-family:'Times New Roman',serif;
+                    color:#333; letter-spacing:2px;
                 }
             </style>
         </head>
@@ -519,17 +1044,4 @@ function printCertificate() {
         </html>`);
     printWin.document.close();
     setTimeout(() => printWin.print(), 600);
-}
-
-/* ================================================================
-   ВСПОМОГАТЕЛЬНАЯ: экранирование HTML
-   ================================================================ */
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }

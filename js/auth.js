@@ -60,13 +60,20 @@ function handleLogin() {
         email:          user.email || '',
         avatarDataUrl:  user.avatarDataUrl || '',
         enrolledEvents: user.enrolledEvents || [],
-        documents:      user.documents || {},
+        reminders:      user.reminders      || [],
+        documents:      user.documents      || {},
     };
 
     setCurrentUser(sessionUser);
     closeLoginDialog();
     updateUIForAuth();
     showNotification('Добро пожаловать, ' + sessionUser.fullName + '!', 'success');
+
+    // Показываем непрочитанные уведомления (одобрения/отказы)
+    _showPendingNotifications(user.username);
+
+    // Показываем напоминания о незарегистрированных мероприятиях
+    setTimeout(checkAndShowReminders, 1500);
 }
 
 /* ================================================================
@@ -99,6 +106,28 @@ function openLoginOrProfile() {
     } else {
         showLoginDialog();
     }
+}
+
+/* ================================================================
+   ПОКАЗ УВЕДОМЛЕНИЙ ПОСЛЕ ВХОДА
+   ================================================================ */
+
+/**
+ * Показывает непрочитанные уведомления об одобрении/отказе заявок.
+ * @param {string} username
+ */
+function _showPendingNotifications(username) {
+    const notifs = getUserNotifications(username);
+    const unread = notifs.filter(n => !n.read);
+    if (unread.length === 0) return;
+
+    markNotificationsRead(username);
+    unread.forEach((n, idx) => {
+        setTimeout(() => {
+            const type = n.type === 'approval' ? 'success' : 'error';
+            showNotification(n.message, type);
+        }, 1200 + idx * 1000);
+    });
 }
 
 /* ================================================================

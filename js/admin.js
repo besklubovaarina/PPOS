@@ -1,8 +1,9 @@
 /**
- * admin.js — Панель администратора: заявки, пользователи, изменения профилей
+ * admin.js — Панель администратора: заявки, пользователи, изменения профилей, статистика
  */
 
-let currentAdminTab = 'changes';
+let currentAdminTab          = 'changes';
+let currentApplicantsEventId = null; // если задан — показываем участников конкретного мероприятия
 
 /* ================================================================
    РЕНДЕР ВСЕЙ ПАНЕЛИ
@@ -10,7 +11,6 @@ let currentAdminTab = 'changes';
 function renderAdminPanel(tab) {
     currentAdminTab = tab || 'changes';
 
-    // Синхронизируем активную вкладку
     document.querySelectorAll('#adminPanel .tab').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === currentAdminTab);
     });
@@ -28,6 +28,8 @@ function renderAdminPanel(tab) {
 }
 
 function switchAdminTab(tab) {
+    // При переключении вкладки сбрасываем просмотр мероприятия
+    currentApplicantsEventId = null;
     renderAdminPanel(tab);
 }
 
@@ -48,7 +50,7 @@ function renderAdminChanges(container) {
     }
 
     html += '<div class="pending-block">';
-    html += `<h4>Требуют вашего решения</h4>`;
+    html += '<h4>Требуют вашего решения</h4>';
 
     pending.forEach(change => {
         const rows = [];
@@ -65,7 +67,7 @@ function renderAdminChanges(container) {
             rows.push(`Email: <em>${escapeHTML(change.oldEmail || '—')}</em> → <strong>${escapeHTML(change.newEmail || '—')}</strong>`);
         }
         if (change.newAvatar && change.newAvatar !== change.oldAvatar) {
-            rows.push(`<strong>Новый аватар загружен</strong>`);
+            rows.push('<strong>Новый аватар загружен</strong>');
         }
 
         const avatarPreview = change.newAvatar
@@ -132,7 +134,7 @@ function renderAdminUsers(container) {
     let html = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h3 style="color:#033b7c;font-size:22px;">Пользователи (${list.length})</h3>
-            <input type="text" class="form-input" placeholder="Поиск по имени или логину..."
+            <input type="text" class="form-input" placeholder="Поиск по имени или логину…"
                    style="max-width:300px;margin-bottom:0;padding:10px 16px;"
                    oninput="filterUsersTable(this.value)">
         </div>
@@ -156,11 +158,9 @@ function renderAdminUsers(container) {
         const docsCount = Object.keys(u.documents || {}).length;
         const roleClass = u.isAdmin
             ? 'badge-admin'
-            : u.role === 'Председатель'
-                ? 'badge-chairman'
-                : u.role === 'Активист профбюро'
-                    ? 'badge-activist'
-                    : 'badge-student';
+            : u.role === 'Председатель'   ? 'badge-chairman'
+            : u.role === 'Активист профбюро' ? 'badge-activist'
+            : 'badge-student';
 
         html += `
             <tr data-search="${(u.fullName + ' ' + u.username).toLowerCase()}">
@@ -173,7 +173,9 @@ function renderAdminUsers(container) {
                 <td style="font-weight:600;">${escapeHTML(u.username)}</td>
                 <td>${escapeHTML(u.fullName || '—')}</td>
                 <td>${escapeHTML(u.groupNumber || '—')}</td>
-                <td><span class="status-badge ${roleClass}">${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}</span></td>
+                <td><span class="status-badge ${roleClass}">
+                    ${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}
+                </span></td>
                 <td style="text-align:center;">${(u.enrolledEvents || []).length}</td>
                 <td style="text-align:center;">${docsCount} / 3</td>
                 <td>
@@ -191,7 +193,7 @@ function renderAdminUsers(container) {
 
 function filterUsersTable(query) {
     const rows = document.querySelectorAll('#users-tbody tr[data-search]');
-    const q = query.toLowerCase();
+    const q    = query.toLowerCase();
     rows.forEach(row => {
         row.style.display = row.dataset.search.includes(q) ? '' : 'none';
     });
@@ -199,11 +201,15 @@ function filterUsersTable(query) {
 
 function adminViewUser(username) {
     const users = getUsers();
-    const u = users[username];
+    const u     = users[username];
     if (!u) return;
 
     const docsHTML = ['consent', 'accounting', 'join'].map(key => {
-        const labels = { consent: 'Согласие на обработку данных', accounting: 'Заявление в бухгалтерию', join: 'Заявление на вступление' };
+        const labels = {
+            consent:    'Согласие на обработку данных',
+            accounting: 'Заявление в бухгалтерию',
+            join:       'Заявление на вступление',
+        };
         const hasDoc = !!(u.documents && u.documents[key]);
         return `<p style="margin:4px 0;font-size:15px;">
             ${labels[key]}: <strong style="color:${hasDoc ? 'var(--green)' : 'var(--gray-500)'}">
@@ -212,7 +218,7 @@ function adminViewUser(username) {
     }).join('');
 
     const eventsFromStorage = getEventsFromStorage() || DEFAULT_EVENTS;
-    const enrolledEvents = (u.enrolledEvents || []).map(id => {
+    const enrolledEvents    = (u.enrolledEvents || []).map(id => {
         const ev = eventsFromStorage.find(e => e.id === id);
         return ev ? ev.title : id;
     });
@@ -225,12 +231,18 @@ function adminViewUser(username) {
                  onerror="this.src='images/default-avatar.png'">
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ЛОГИН</p><p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.username)}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">РОЛЬ</p><p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ФИО</p><p style="font-size:16px;color:#163a6f;">${escapeHTML(u.fullName || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ГРУППА</p><p style="font-size:16px;color:#163a6f;">${escapeHTML(u.groupNumber || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ТЕЛЕФОН</p><p style="font-size:16px;color:#163a6f;">${escapeHTML(u.phone || '—')}</p></div>
-            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">EMAIL</p><p style="font-size:16px;color:#163a6f;">${escapeHTML(u.email || '—')}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ЛОГИН</p>
+                 <p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.username)}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">РОЛЬ</p>
+                 <p style="font-size:16px;font-weight:700;color:#033b7c;">${escapeHTML(u.isAdmin ? 'Администратор' : (u.role || 'Студент'))}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ФИО</p>
+                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.fullName || '—')}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ГРУППА</p>
+                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.groupNumber || '—')}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">ТЕЛЕФОН</p>
+                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.phone || '—')}</p></div>
+            <div><p style="font-size:13px;color:#6b7280;font-weight:600;">EMAIL</p>
+                 <p style="font-size:16px;color:#163a6f;">${escapeHTML(u.email || '—')}</p></div>
         </div>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">
         <p style="font-weight:700;color:#033b7c;margin-bottom:8px;">Документы:</p>
@@ -244,7 +256,7 @@ function adminViewUser(username) {
 }
 
 function adminResetUser(username) {
-    if (!confirm(`Сбросить данные пользователя ${username}? Будут удалены все его записи на мероприятия и загруженные документы.`)) return;
+    if (!confirm(`Сбросить данные пользователя ${username}? Будут удалены все его записи и загруженные документы.`)) return;
 
     const users = getUsers();
     if (users[username]) {
@@ -254,7 +266,6 @@ function adminResetUser(username) {
         saveUsers(users);
     }
 
-    // Удаляем заявки пользователя
     const apps = getApplications().filter(a => a.username !== username);
     saveApplications(apps);
 
@@ -263,26 +274,128 @@ function adminResetUser(username) {
 }
 
 /* ================================================================
-   ВКЛАДКА: ЗАЯВКИ НА МЕРОПРИЯТИЯ
+   ВКЛАДКА: ЗАЯВКИ — МАРШРУТИЗАЦИЯ
    ================================================================ */
 function renderAdminApplications(container) {
-    const apps   = getApplications();
+    if (currentApplicantsEventId) {
+        renderEventApplicants(container, currentApplicantsEventId);
+    } else {
+        renderApplicationsOverview(container);
+    }
+}
+
+/* ================================================================
+   ОБЗОР ЗАЯВОК ПО МЕРОПРИЯТИЯМ
+   ================================================================ */
+function renderApplicationsOverview(container) {
     const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const apps   = getApplications();
+
+    let html = `<h3 style="color:#033b7c;font-size:22px;margin-bottom:20px;">
+                    Заявки по мероприятиям
+                </h3>
+                <div class="events-apps-overview">`;
+
+    if (events.length === 0) {
+        html += '<p style="color:#6b7280;font-size:17px;">Мероприятий пока нет</p>';
+    } else {
+        events.forEach(event => {
+            const eventApps = apps.filter(a => a.eventId === event.id);
+            const pending   = eventApps.filter(a => a.status === 'pending').length;
+            const approved  = eventApps.filter(a => a.status === 'approved').length;
+            const reserve   = eventApps.filter(a => a.status === 'reserve').length;
+            const rejected  = eventApps.filter(a => a.status === 'rejected').length;
+
+            html += `
+                <div class="event-app-card">
+                    <div class="event-app-card-header">
+                        <div>
+                            <h4 class="event-app-card-title">${escapeHTML(event.title)}</h4>
+                            <p class="event-app-card-meta">
+                                ${escapeHTML(event.date)} · ${escapeHTML(event.time)}
+                                ${event.maxParticipants > 0
+                                    ? ` · Мест: ${event.maxParticipants}${event.reserveCount > 0 ? `, резерв: ${event.reserveCount}` : ''}`
+                                    : ' · Без ограничений'}
+                            </p>
+                        </div>
+                        <span class="status-badge ${event.status === 'closed' ? 'badge-rejected' : 'badge-approved'}">
+                            ${event.status === 'closed' ? 'Закрыто' : 'Открыто'}
+                        </span>
+                    </div>
+
+                    <div class="event-app-stats">
+                        <span class="status-badge badge-pending">${pending} ожидают</span>
+                        <span class="status-badge badge-approved">${approved} одобрено</span>
+                        ${reserve  > 0 ? `<span class="status-badge badge-reserve">${reserve} резерв</span>` : ''}
+                        ${rejected > 0 ? `<span class="status-badge badge-rejected">${rejected} отклонено</span>` : ''}
+                    </div>
+
+                    <div class="event-app-actions-row">
+                        <button class="btn-approve"
+                                onclick="currentApplicantsEventId='${event.id}';renderAdminPanel('applications');">
+                            Список участников
+                        </button>
+                        <button class="btn-export-excel" onclick="exportToExcel('${event.id}')">
+                            Excel
+                        </button>
+                        <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
+                            Word
+                        </button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+/* ================================================================
+   СПИСОК УЧАСТНИКОВ КОНКРЕТНОГО МЕРОПРИЯТИЯ
+   ================================================================ */
+function renderEventApplicants(container, eventId) {
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === eventId);
+    if (!event) { currentApplicantsEventId = null; renderApplicationsOverview(container); return; }
+
+    const apps  = getApplications().filter(a => a.eventId === eventId);
+    const users = getUsers();
+
+    const pending  = apps.filter(a => a.status === 'pending').length;
+    const approved = apps.filter(a => a.status === 'approved').length;
+    const reserve  = apps.filter(a => a.status === 'reserve').length;
+    const rejected = apps.filter(a => a.status === 'rejected').length;
+
+    // Текстовые поля формы (для столбцов таблицы)
+    const textFields = (event.formFields || []).filter(f => f.type !== 'file');
+    const fileFields = (event.formFields || []).filter(f => f.type === 'file');
 
     let html = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-            <h3 style="color:#033b7c;font-size:22px;">Заявки на мероприятия (${apps.length})</h3>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                <select class="filter-select" onchange="filterApplications(this.value)" id="app-status-filter">
-                    <option value="all">Все статусы</option>
-                    <option value="pending">Ожидают</option>
-                    <option value="approved">Одобрены</option>
-                    <option value="rejected">Отклонены</option>
-                </select>
-                <select class="filter-select" onchange="filterApplicationsByEvent(this.value)" id="app-event-filter">
-                    <option value="all">Все мероприятия</option>
-                    ${events.map(e => `<option value="${e.id}">${escapeHTML(e.title)}</option>`).join('')}
-                </select>
+        <!-- Кнопка «Назад» -->
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;">
+            <button class="btn-cancel"
+                    style="padding:10px 18px;"
+                    onclick="currentApplicantsEventId=null;renderAdminPanel('applications');">
+                ← Назад
+            </button>
+            <h3 style="color:#033b7c;font-size:20px;margin:0;flex:1;">${escapeHTML(event.title)}</h3>
+        </div>
+
+        <!-- Сводка и кнопки экспорта -->
+        <div style="display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span class="status-badge badge-pending">${pending} ожидают</span>
+                <span class="status-badge badge-approved">${approved} одобрено</span>
+                ${reserve  > 0 ? `<span class="status-badge badge-reserve">${reserve} резерв</span>` : ''}
+                ${rejected > 0 ? `<span class="status-badge badge-rejected">${rejected} отклонено</span>` : ''}
+            </div>
+            <div style="display:flex;gap:10px;margin-left:auto;">
+                <button class="btn-export-excel" onclick="exportToExcel('${eventId}')">
+                    Скачать Excel
+                </button>
+                <button class="btn-export-word"  onclick="exportToWord('${eventId}')">
+                    Скачать Word
+                </button>
             </div>
         </div>`;
 
@@ -292,44 +405,101 @@ function renderAdminApplications(container) {
         return;
     }
 
+    // Столбцы для текстовых полей
+    const thTextFields = textFields.map(f => `<th>${escapeHTML(f.title)}</th>`).join('');
+    const hasFiles     = fileFields.length > 0;
+
     html += `
         <div style="overflow-x:auto;">
-        <table class="data-table" id="apps-table">
+        <table class="data-table">
             <thead>
                 <tr>
-                    <th>Участник</th>
-                    <th>Мероприятие</th>
+                    <th>№</th>
+                    <th>ФИО</th>
+                    <th>Группа</th>
+                    <th>Телефон</th>
                     <th>Дата подачи</th>
                     <th>Статус</th>
+                    ${thTextFields}
+                    ${hasFiles ? '<th>Файлы</th>' : ''}
                     <th>Действия</th>
                 </tr>
             </thead>
-            <tbody id="apps-tbody">`;
+            <tbody>`;
 
-    apps.forEach(app => {
-        const event     = events.find(e => e.id === app.eventId);
+    apps.forEach((app, idx) => {
+        const u = users[app.username] || {};
+
         const statusMap = {
             approved: ['badge-approved', 'Одобрено'],
             rejected: ['badge-rejected', 'Отклонено'],
             pending:  ['badge-pending',  'Ожидает'],
+            reserve:  ['badge-reserve',  'Резерв'],
         };
         const [badgeClass, statusLabel] = statusMap[app.status] || ['badge-pending', 'Ожидает'];
 
+        // Значения текстовых полей формы
+        const tdTextFields = textFields.map(f => {
+            const val = (app.answers || {})[f.id] || '';
+            if (!val) return '<td style="color:#9ca3af;">—</td>';
+            if (f.type === 'url') {
+                return `<td><a href="${escapeHTML(val)}" target="_blank" rel="noopener"
+                              style="color:var(--blue-main);">${escapeHTML(val.slice(0, 50))}${val.length > 50 ? '…' : ''}</a></td>`;
+            }
+            return `<td>${escapeHTML(val)}</td>`;
+        }).join('');
+
+        // Кнопки файлов
+        let tdFiles = '';
+        if (hasFiles) {
+            const appFiles = fileFields.filter(f => (app.answers || {})[f.id]);
+            if (appFiles.length === 0) {
+                tdFiles = '<td style="color:#9ca3af;">—</td>';
+            } else {
+                const btns = appFiles.map(f =>
+                    `<button class="btn-file-dl"
+                             onclick="downloadApplicantFile('${app.id}','${f.id}','${escapeHTML(app.username)}_${escapeHTML(f.title)}')">
+                         ${escapeHTML(f.title)}
+                     </button>`
+                ).join('');
+                const allBtn = appFiles.length > 1
+                    ? `<button class="btn-file-dl btn-file-dl-all"
+                               onclick="downloadAllApplicantFiles('${app.id}')">
+                           Все файлы
+                       </button>`
+                    : '';
+                tdFiles = `<td><div style="display:flex;flex-direction:column;gap:4px;">${btns}${allBtn}</div></td>`;
+            }
+        }
+
+        // Кнопки действий
+        const actions = [];
+        if (app.status !== 'approved') {
+            actions.push(`<button class="btn-approve" onclick="approveApplication('${app.id}')">Одобрить</button>`);
+        }
+        if (app.status !== 'reserve') {
+            actions.push(`<button class="btn-reserve" onclick="setReserveApplication('${app.id}')">Резерв</button>`);
+        }
+        if (app.status !== 'rejected') {
+            actions.push(`<button class="btn-reject" onclick="rejectApplication('${app.id}')">Отклонить</button>`);
+        }
+
         html += `
-            <tr data-status="${app.status}" data-event="${app.eventId}">
+            <tr>
+                <td>${idx + 1}</td>
                 <td>
-                    <strong>${escapeHTML(app.fullName || app.username)}</strong>
-                    ${app.fullName ? `<br><span style="font-size:13px;color:#6b7280;">${escapeHTML(app.username)}</span>` : ''}
+                    <strong>${escapeHTML(app.fullName || u.fullName || app.username)}</strong>
+                    ${app.username ? `<br><span style="font-size:12px;color:#6b7280;">${escapeHTML(app.username)}</span>` : ''}
                 </td>
-                <td>${event ? escapeHTML(event.title) : '<em style="color:#6b7280;">Мероприятие удалено</em>'}</td>
-                <td>${escapeHTML(app.date)}</td>
+                <td>${escapeHTML(u.groupNumber || '—')}</td>
+                <td>${escapeHTML(u.phone || '—')}</td>
+                <td>${escapeHTML(app.date || '—')}</td>
                 <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
+                ${tdTextFields}
+                ${tdFiles}
                 <td>
-                    <div class="data-table-actions">
-                        ${app.status === 'pending' ? `
-                            <button class="btn-approve" onclick="approveApplication('${app.id}')">✓</button>
-                            <button class="btn-reject"  onclick="rejectApplication('${app.id}')">✕</button>
-                        ` : `<span style="color:#6b7280;font-size:13px;">—</span>`}
+                    <div class="data-table-actions" style="flex-direction:column;gap:4px;">
+                        ${actions.join('')}
                     </div>
                 </td>
             </tr>`;
@@ -339,49 +509,75 @@ function renderAdminApplications(container) {
     container.innerHTML = html;
 }
 
-function filterApplications(statusValue) {
-    const rows = document.querySelectorAll('#apps-tbody tr[data-status]');
-    rows.forEach(row => {
-        const matchStatus = statusValue === 'all' || row.dataset.status === statusValue;
-        const eventFilter = document.getElementById('app-event-filter')?.value || 'all';
-        const matchEvent  = eventFilter === 'all' || row.dataset.event === eventFilter;
-        row.style.display = (matchStatus && matchEvent) ? '' : 'none';
-    });
-}
-
-function filterApplicationsByEvent(eventValue) {
-    const rows = document.querySelectorAll('#apps-tbody tr[data-event]');
-    rows.forEach(row => {
-        const matchEvent  = eventValue === 'all' || row.dataset.event === eventValue;
-        const statusFilter = document.getElementById('app-status-filter')?.value || 'all';
-        const matchStatus  = statusFilter === 'all' || row.dataset.status === statusFilter;
-        row.style.display  = (matchStatus && matchEvent) ? '' : 'none';
-    });
-}
+/* ================================================================
+   ДЕЙСТВИЯ С ЗАЯВКАМИ
+   ================================================================ */
 
 function approveApplication(appId) {
-    const apps = getApplications();
-    const app  = apps.find(a => a.id === appId);
+    const apps  = getApplications();
+    const app   = apps.find(a => a.id === appId);
     if (!app) return;
+
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === app.eventId);
 
     app.status = 'approved';
     saveApplications(apps);
+
+    // Уведомление участнику
+    addUserNotification(app.username, {
+        type:       'approval',
+        message:    `Ваша заявка на мероприятие «${event?.title || 'Мероприятие'}» одобрена!`,
+        eventTitle: event?.title || '',
+    });
 
     renderAdminPanel(currentAdminTab);
     showNotification('Заявка одобрена', 'success');
 }
 
-function rejectApplication(appId) {
-    if (!confirm('Отклонить заявку?')) return;
+function setReserveApplication(appId) {
     const apps = getApplications();
     const app  = apps.find(a => a.id === appId);
     if (!app) return;
 
+    app.status = 'reserve';
+    saveApplications(apps);
+    // Резервным НЕ отправляется уведомление до итоговых списков
+
+    renderAdminPanel(currentAdminTab);
+    showNotification('Участник переведён в резервный список', '');
+}
+
+function rejectApplication(appId) {
+    if (!confirm('Отклонить заявку? Участник получит уведомление об отказе.')) return;
+
+    const apps  = getApplications();
+    const app   = apps.find(a => a.id === appId);
+    if (!app) return;
+
+    const events = getEventsFromStorage() || DEFAULT_EVENTS;
+    const event  = events.find(e => e.id === app.eventId);
+
     app.status = 'rejected';
     saveApplications(apps);
 
+    // Убираем из enrolledEvents пользователя
+    const users = getUsers();
+    if (users[app.username]) {
+        users[app.username].enrolledEvents =
+            (users[app.username].enrolledEvents || []).filter(id => id !== app.eventId);
+        saveUsers(users);
+    }
+
+    // Уведомление участнику об отказе
+    addUserNotification(app.username, {
+        type:       'rejection',
+        message:    `К сожалению, ваша заявка на «${event?.title || 'Мероприятие'}» не прошла отбор.`,
+        eventTitle: event?.title || '',
+    });
+
     renderAdminPanel(currentAdminTab);
-    showNotification('Заявка отклонена', 'warning');
+    showNotification('Заявка отклонена, уведомление отправлено', 'warning');
 }
 
 /* ================================================================
@@ -399,7 +595,6 @@ function renderAdminStats(container) {
     const approvedCount = apps.filter(a => a.status === 'approved').length;
     const pendingCount  = pending.length;
 
-    // Самое популярное мероприятие
     const eventPopularity = events.map(e => ({
         title: e.title,
         count: apps.filter(a => a.eventId === e.id).length,
@@ -407,7 +602,6 @@ function renderAdminStats(container) {
 
     const topEvent = eventPopularity[0];
 
-    // Число студентов с заполненными документами
     const docsComplete = Object.values(users).filter(u => {
         const docs = u.documents || {};
         return Object.keys(docs).length >= 3;
@@ -440,30 +634,33 @@ function renderAdminStats(container) {
                 <p style="font-size:14px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:8px;">
                     Самое популярное мероприятие
                 </p>
-                <p style="font-size:20px;font-weight:700;color:#033b7c;margin-bottom:4px;">${escapeHTML(topEvent.title)}</p>
+                <p style="font-size:20px;font-weight:700;color:#033b7c;margin-bottom:4px;">
+                    ${escapeHTML(topEvent.title)}
+                </p>
                 <p style="color:#164469;font-size:16px;">${topEvent.count} заявок</p>
             </div>`;
     }
 
-    // Статистика по типам мероприятий
     html += `
         <div style="margin-top:24px;">
             <h4 style="color:#033b7c;margin-bottom:16px;">Заявки по мероприятиям:</h4>
             ${eventPopularity.slice(0, 8).map(item => `
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
                     <div style="flex:1;min-width:0;">
-                        <p style="font-size:15px;color:#163a6f;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        <p style="font-size:15px;color:#163a6f;font-weight:500;
+                                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                             ${escapeHTML(item.title)}
                         </p>
                     </div>
                     <div style="flex:0 0 120px;background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;">
-                        <div style="width:${appsCount > 0 ? Math.round(item.count / appsCount * 100) : 0}%;height:100%;background:var(--blue-main);border-radius:4px;"></div>
+                        <div style="width:${appsCount > 0 ? Math.round(item.count / appsCount * 100) : 0}%;
+                                    height:100%;background:var(--blue-main);border-radius:4px;"></div>
                     </div>
-                    <span style="font-size:14px;font-weight:700;color:#033b7c;flex:0 0 30px;text-align:right;">${item.count}</span>
+                    <span style="font-size:14px;font-weight:700;color:#033b7c;flex:0 0 30px;text-align:right;">
+                        ${item.count}
+                    </span>
                 </div>`).join('')}
-        </div>`;
-
-    html += `
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;">
             <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:14px;padding:20px;">
                 <p style="font-size:13px;color:#065f46;font-weight:600;text-transform:uppercase;">Всего заявок</p>
@@ -479,7 +676,7 @@ function renderAdminStats(container) {
 }
 
 /* ================================================================
-   УПРАВЛЕНИЕ ГРУППАМИ ИНСТИТУТА (из группового раздела)
+   УПРАВЛЕНИЕ ГРУППАМИ ИНСТИТУТА
    ================================================================ */
 let isEditingInstitute = false;
 
