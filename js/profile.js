@@ -88,7 +88,7 @@ function renderMyEventsInProfile() {
                </span>`
             : '';
 
-        const canSeeCert = event.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = event.hasCertificate && event.status === 'completed' && myApp?.status === 'approved';
         const certBtn = canSeeCert
             ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
             : '';

@@ -1472,13 +1472,11 @@ textarea.form-input {
    ================================================================ */
 .certificate-container {
     position: relative;
-    display: inline-block;
+    display: block;
     max-width: 800px;
     width: 100%;
-}
-
-.certificate-container img {
-    width: 100%;
+    aspect-ratio: 1.414 / 1;
+    min-height: 380px;
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-lg);
 }
