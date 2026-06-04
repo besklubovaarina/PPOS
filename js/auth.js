@@ -167,6 +167,22 @@ function updateUIForAuth() {
     if (navAdminBtn)     navAdminBtn.style.display     = admin     ? 'inline-block' : 'none';
     if (navMyEventsBtn)  navMyEventsBtn.style.display  = (loggedIn && !admin) ? 'inline-block' : 'none';
 
+    // Бейдж ожидающих заявок для администратора
+    const badge = document.getElementById('admin-pending-badge');
+    if (badge) {
+        if (admin) {
+            const pendingCount = getApplications().filter(a => a.status === 'pending').length;
+            if (pendingCount > 0) {
+                badge.textContent    = pendingCount > 99 ? '99+' : pendingCount;
+                badge.style.display  = 'inline-block';
+            } else {
+                badge.style.display  = 'none';
+            }
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+
     const myEventsSection = document.getElementById('myEvents');
     if (myEventsSection) myEventsSection.style.display = admin ? 'none' : '';
 
