@@ -159,13 +159,15 @@ function updateUIForAuth() {
     logoutBtn.style.display = loggedIn ? 'inline-block' : 'none';
 
     // Кнопки навигации — только для авторизованных
-    const navInstituteBtn  = document.getElementById('nav-institute-btn');
-    const navAdminBtn      = document.getElementById('nav-admin-btn');
-    const navMyEventsBtn   = document.getElementById('nav-my-events-btn');
+    const navAdminBtn    = document.getElementById('nav-admin-btn');
+    const navMyEventsBtn = document.getElementById('nav-my-events-btn');
 
-    if (navInstituteBtn) navInstituteBtn.style.display = loggedIn ? 'inline-block' : 'none';
-    if (navAdminBtn)     navAdminBtn.style.display     = admin     ? 'inline-block' : 'none';
-    if (navMyEventsBtn)  navMyEventsBtn.style.display  = (loggedIn && !admin) ? 'inline-block' : 'none';
+    if (navAdminBtn)     navAdminBtn.style.display    = admin                  ? 'inline-block' : 'none';
+    if (navMyEventsBtn)  navMyEventsBtn.style.display = (loggedIn && !admin)   ? 'inline-block' : 'none';
+
+    // Раздел групп института — только для администратора
+    const instituteSection = document.getElementById('instituteGroups');
+    if (instituteSection) instituteSection.style.display = admin ? '' : 'none';
 
 
     const myEventsSection = document.getElementById('myEvents');

@@ -358,9 +358,12 @@ function renderApplicationsOverview(container) {
                         <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
                             Word
                         </button>
-                        ${event.status !== 'completed' ? `<button class="btn-reserve" onclick="adminCompleteEvent('${event.id}')">
-                            Завершить мероприятие
-                        </button>` : `<span class="status-badge badge-approved" style="align-self:center;">Завершено</span>`}
+                        ${event.status === 'completed'
+                            ? `<span class="status-badge badge-approved" style="align-self:center;">Завершено</span>`
+                            : event.status === 'closed'
+                                ? `<button class="btn-enroll" style="background:#10b981;border-color:#10b981;" onclick="adminReopenEvent('${event.id}')">Возобновить прием заявок</button>`
+                                : `<button class="btn-reserve" onclick="adminCloseEvent('${event.id}')">Завершить прием заявок</button>`
+                        }
                     </div>
                 </div>`;
         });
@@ -600,18 +603,32 @@ function rejectApplication(appId) {
     showNotification('Заявка отклонена, уведомление отправлено', 'warning');
 }
 
-function adminCompleteEvent(eventId) {
-    if (!confirm('Завершить мероприятие? После этого участникам станут доступны сертификаты.')) return;
+function adminCloseEvent(eventId) {
+    if (!confirm('Завершить прием заявок на это мероприятие?')) return;
 
     const events = getEventsFromStorage() || [];
     const idx    = events.findIndex(e => e.id === eventId);
     if (idx === -1) return;
 
-    events[idx].status = 'completed';
+    events[idx].status = 'closed';
     saveEventsToStorage(events);
 
     renderAdminPanel(currentAdminTab);
-    showNotification('Мероприятие завершено, сертификаты доступны участникам', 'success');
+    showNotification('Прием заявок завершён', 'warning');
+}
+
+function adminReopenEvent(eventId) {
+    if (!confirm('Возобновить прием заявок на это мероприятие?')) return;
+
+    const events = getEventsFromStorage() || [];
+    const idx    = events.findIndex(e => e.id === eventId);
+    if (idx === -1) return;
+
+    events[idx].status = 'open';
+    saveEventsToStorage(events);
+
+    renderAdminPanel(currentAdminTab);
+    showNotification('Прием заявок возобновлён', 'success');
 }
 
 /* ================================================================
@@ -746,7 +763,7 @@ function renderInstituteGroupsSection() {
 
     // Admin: show institute tabs + groups grid
     const instName = currentInstituteTab;
-    const groups   = INSTITUTE_GROUPS[instName] || [];
+    const groups   = _getInstGroups(instName);
 
     // Build tabs HTML
     let tabsHtml = '<div class="institute-tabs">';
@@ -759,18 +776,19 @@ function renderInstituteGroupsSection() {
     // Build groups grid
     let gridHtml = '<div class="grid-6" style="margin-top:20px;">';
     groups.forEach(g => {
-        const hasMem = !!(DEFAULT_GROUP_MEMBERS_MAP[g] && DEFAULT_GROUP_MEMBERS_MAP[g].length > 0);
-        const badge  = hasMem ? '<span style="position:absolute;top:6px;right:6px;background:#22c55e;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;">✓</span>' : '';
+        const delBtn = isEditingInstitute
+            ? `<button class="delete-badge" onclick="event.stopPropagation();deleteInstGroup('${escapeHTML(g)}','${escapeHTML(instName)}')" title="Удалить">✕</button>`
+            : '';
         gridHtml += `
             <div class="member-card" style="cursor:pointer;" onclick="showGroupMembers('${escapeHTML(g)}')">
-                <div class="group-avatar" style="cursor:pointer;">
-                    ${badge}
+                <div class="group-avatar" style="cursor:pointer;position:relative;">
+                    ${delBtn}
                     <p class="group-name" style="font-size:${g.length > 5 ? '28px' : '38px'};">${escapeHTML(g)}</p>
                 </div>
             </div>`;
     });
 
-    // Add/delete buttons in edit mode
+    // Add button in edit mode
     if (isEditingInstitute) {
         gridHtml += `
             <div class="member-card">
@@ -787,6 +805,15 @@ function renderInstituteGroupsSection() {
 function switchInstituteTab(name) {
     currentInstituteTab = name;
     renderInstituteGroupsSection();
+}
+
+function _getInstGroups(instName) {
+    const raw = localStorage.getItem('ppos_inst_' + instName);
+    return raw ? JSON.parse(raw) : [...(INSTITUTE_GROUPS[instName] || [])];
+}
+
+function _saveInstGroups(instName, groups) {
+    localStorage.setItem('ppos_inst_' + instName, JSON.stringify(groups));
 }
 
 function _getGroupMembers(groupName) {
@@ -845,9 +872,9 @@ function addInstGroup() {
     const name = document.getElementById('new-group-name')?.value.trim();
     if (!name) { showNotification('Введите номер группы', 'error'); return; }
 
-    const groups = getInstGroupsFromStorage() || [];
-    groups.push({ id: Date.now().toString(), name });
-    saveInstGroupsToStorage(groups);
+    const groups = _getInstGroups(currentInstituteTab);
+    if (!groups.includes(name)) groups.push(name);
+    _saveInstGroups(currentInstituteTab, groups);
 
     const input = document.getElementById('new-group-name');
     if (input) input.value = '';
@@ -861,11 +888,10 @@ function cancelAddGroup() {
     document.getElementById('add-group-form').style.display = 'none';
 }
 
-function deleteInstGroup(groupId) {
-    if (!confirm('Удалить группу?')) return;
-    let groups = getInstGroupsFromStorage() || [];
-    groups = groups.filter(g => g.id !== groupId);
-    saveInstGroupsToStorage(groups);
+function deleteInstGroup(groupName, instName) {
+    if (!confirm('Удалить группу ' + groupName + '?')) return;
+    const groups = _getInstGroups(instName).filter(g => g !== groupName);
+    _saveInstGroups(instName, groups);
     renderInstituteGroupsSection();
     showNotification('Группа удалена', 'warning');
 }
