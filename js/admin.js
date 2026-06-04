@@ -853,7 +853,7 @@ function showGroupMembers(groupName) {
 
     html += `</div>`;
 
-    document.getElementById('description-content').innerHTML = html;
+    document.getElementById('modal-description').innerHTML = html;
     document.getElementById('description-modal').style.display = 'flex';
 }
 
