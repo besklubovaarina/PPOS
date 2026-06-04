@@ -26,17 +26,6 @@ function renderAdminPanel(tab) {
         default:             renderAdminChanges(container);
     }
 
-    // Обновляем бейдж ожидающих заявок
-    const badge = document.getElementById('admin-pending-badge');
-    if (badge) {
-        const pendingCount = getApplications().filter(a => a.status === 'pending').length;
-        if (pendingCount > 0) {
-            badge.textContent   = pendingCount > 99 ? '99+' : pendingCount;
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
-    }
 }
 
 function switchAdminTab(tab) {
