@@ -144,6 +144,7 @@ function getParticipantsCount(eventId) {
 function getEventStatusBadge(event) {
     const count = getParticipantsCount(event.id);
     const max   = event.maxParticipants || 0;
+    const admin = isAdmin();
 
     if (event.status === 'closed') {
         return `<span class="event-status-badge closed">Запись закрыта</span>`;
@@ -152,10 +153,14 @@ function getEventStatusBadge(event) {
         return `<span class="event-status-badge closed">Мест нет</span>`;
     }
     if (max > 0 && count >= max * 0.75) {
-        return `<span class="event-status-badge limited">Мест мало: ${max - count} из ${max}</span>`;
+        return admin
+            ? `<span class="event-status-badge limited">Мест мало: ${max - count} из ${max}</span>`
+            : `<span class="event-status-badge limited">Мест мало</span>`;
     }
     if (max > 0) {
-        return `<span class="event-status-badge open">Мест: ${max - count} из ${max}</span>`;
+        return admin
+            ? `<span class="event-status-badge open">Мест: ${max - count} из ${max}</span>`
+            : `<span class="event-status-badge open">Есть места</span>`;
     }
     return `<span class="event-status-badge open">Без ограничений</span>`;
 }
@@ -229,7 +234,7 @@ function buildEventCardHTML(event, showCertificate = false) {
         : '';
 
     // ---- Прогресс-бар ----
-    const progressBar = max > 0 ? `
+    const progressBar = (admin && max > 0) ? `
         <div class="participants-bar">
             <div class="participants-bar-fill">
                 <div class="participants-bar-inner"
@@ -264,7 +269,7 @@ function buildEventCardHTML(event, showCertificate = false) {
                                 <p class="event-meta-label">Время</p>
                                 <p class="event-meta-value">${escapeHTML(event.time)}</p>
                             </div>
-                            ${max > 0 ? `
+                            ${(admin && max > 0) ? `
                             <div>
                                 <p class="event-meta-label">Участников</p>
                                 <p class="event-meta-value">${count} / ${max}</p>
