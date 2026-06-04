@@ -2180,3 +2180,36 @@ textarea.form-input {
 @media (max-width: 1100px) {
     .header-mascot { display: none; }
 }
+
+/* ================================================================
+   ТАБЫ ИНСТИТУТОВ
+   ================================================================ */
+.institute-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.inst-tab {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 2px solid var(--blue-light);
+    background: var(--white);
+    color: var(--blue-main);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.inst-tab:hover {
+    background: var(--blue-pale);
+    border-color: var(--blue-main);
+}
+
+.inst-tab.active {
+    background: var(--blue-main);
+    color: var(--white);
+    border-color: var(--blue-main);
+}

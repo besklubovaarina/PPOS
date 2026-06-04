@@ -124,7 +124,9 @@ function renderGroupInProfile() {
     if (!container) return;
 
     const admin   = isAdmin();
-    const members = getGroupMembersFromStorage() || DEFAULT_GROUP_MEMBERS;
+    const user2   = getCurrentUser();
+    const grp     = user2?.groupNumber || '';
+    const members = (grp ? getGroupMembersFromStorage(grp) : null) || DEFAULT_GROUP_MEMBERS_MAP[grp] || DEFAULT_GROUP_MEMBERS;
     const users   = getUsers();
 
     let html = '<div class="grid-7" style="margin-bottom:20px;">';
@@ -204,9 +206,10 @@ function toggleGroupEditInProfile() {
 
 function deleteMemberFromGroup(memberId) {
     if (!confirm('Удалить участника из группы?')) return;
-    let members = getGroupMembersFromStorage() || [];
+    const grp = getCurrentUser()?.groupNumber;
+    let members = (grp ? getGroupMembersFromStorage(grp) : null) || getGroupMembersFromStorage() || [];
     members = members.filter(m => m.id !== memberId);
-    saveGroupMembersToStorage(members);
+    saveGroupMembersToStorage(members, getCurrentUser()?.groupNumber);
     renderGroupInProfile();
     showNotification('Участник удалён', 'warning');
 }
@@ -217,9 +220,10 @@ function addMemberFromProfile() {
 
     if (!name) { showNotification('Введите ФИО участника', 'error'); return; }
 
-    const members = getGroupMembersFromStorage() || [];
+    const grp = getCurrentUser()?.groupNumber;
+    const members = (grp ? getGroupMembersFromStorage(grp) : null) || getGroupMembersFromStorage() || [];
     members.push({ id: Date.now().toString(), name, username: username || '' });
-    saveGroupMembersToStorage(members);
+    saveGroupMembersToStorage(members, getCurrentUser()?.groupNumber);
 
     document.getElementById('profile-add-member-form').style.display = 'none';
     document.getElementById('profile-new-member-name').value = '';
