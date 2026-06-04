@@ -485,9 +485,9 @@ const DEFAULT_USERS_LIST = [
    ИНСТИТУТЫ И ГРУППЫ АлтГПУ
    ================================================================ */
 const INSTITUTES = [
+    { id: 'iitifmo', name: 'ИИТиФМО'  },
     { id: 'liin',    name: 'ЛИИН'      },
     { id: 'ipip',    name: 'ИПиП'      },
-    { id: 'iitifmo', name: 'ИИТиФМО'  },
     { id: 'iiskip',  name: 'ИИСКиП'   },
     { id: 'ifkis',   name: 'ИФКиС'    },
     { id: 'ifimk',   name: 'ИФиМК'    },

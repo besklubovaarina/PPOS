@@ -774,7 +774,6 @@ function openEditEventForm(eventId) {
     document.getElementById('new-event-time').value                = event.time        || '';
     document.getElementById('new-event-type').value                = event.type        || 'star';
     document.getElementById('new-event-max').value                 = event.maxParticipants || 0;
-    document.getElementById('new-event-reserve').value             = event.reserveCount    || 0;
     document.getElementById('new-event-description').value         = event.description  || '';
 
     const requiresForm = !!(event.requiresForm && event.formFields?.length > 0);
@@ -808,7 +807,6 @@ function addEvent() {
     const type        = document.getElementById('new-event-type')?.value           || 'star';
     const desc        = document.getElementById('new-event-description')?.value.trim() || '';
     const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
-    const reserve     = parseInt(document.getElementById('new-event-reserve')?.value) || 0;
     const needsForm       = document.getElementById('new-event-requires-form')?.checked || false;
     const hasCertificate  = document.getElementById('new-event-has-certificate')?.checked || false;
 
@@ -842,7 +840,7 @@ function addEvent() {
                 type,
                 description:     desc,
                 maxParticipants: max,
-                reserveCount:    reserve,
+                reserveCount:    events[idx].reserveCount || 0,
                 requiresForm:    needsForm,
                 formFields,
                 status,
@@ -861,7 +859,7 @@ function addEvent() {
             type,
             description:     desc,
             maxParticipants: max,
-            reserveCount:    reserve,
+            reserveCount:    0,
             requiresForm:    needsForm,
             formFields,
             status:          'open',
@@ -890,7 +888,7 @@ function resetEventForm() {
     adminFormFields    = [];
 
     const ids = ['new-event-title', 'new-event-date', 'new-event-time',
-                 'new-event-description', 'new-event-max', 'new-event-reserve'];
+                 'new-event-description', 'new-event-max'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
     const typeEl = document.getElementById('new-event-type');
