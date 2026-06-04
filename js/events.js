@@ -144,6 +144,7 @@ function getParticipantsCount(eventId) {
 function getEventStatusBadge(event) {
     const count = getParticipantsCount(event.id);
     const max   = event.maxParticipants || 0;
+    const admin = isAdmin();
 
     if (event.status === 'closed') {
         return `<span class="event-status-badge closed">Запись закрыта</span>`;
@@ -152,10 +153,14 @@ function getEventStatusBadge(event) {
         return `<span class="event-status-badge closed">Мест нет</span>`;
     }
     if (max > 0 && count >= max * 0.75) {
-        return `<span class="event-status-badge limited">Мест мало: ${max - count} из ${max}</span>`;
+        return admin
+            ? `<span class="event-status-badge limited">Мест мало: ${max - count} из ${max}</span>`
+            : `<span class="event-status-badge limited">Мест мало</span>`;
     }
     if (max > 0) {
-        return `<span class="event-status-badge open">Мест: ${max - count} из ${max}</span>`;
+        return admin
+            ? `<span class="event-status-badge open">Мест: ${max - count} из ${max}</span>`
+            : `<span class="event-status-badge open">Есть места</span>`;
     }
     return `<span class="event-status-badge open">Без ограничений</span>`;
 }
@@ -229,7 +234,7 @@ function buildEventCardHTML(event, showCertificate = false) {
         : '';
 
     // ---- Прогресс-бар ----
-    const progressBar = max > 0 ? `
+    const progressBar = (admin && max > 0) ? `
         <div class="participants-bar">
             <div class="participants-bar-fill">
                 <div class="participants-bar-inner"
@@ -264,7 +269,7 @@ function buildEventCardHTML(event, showCertificate = false) {
                                 <p class="event-meta-label">Время</p>
                                 <p class="event-meta-value">${escapeHTML(event.time)}</p>
                             </div>
-                            ${max > 0 ? `
+                            ${(admin && max > 0) ? `
                             <div>
                                 <p class="event-meta-label">Участников</p>
                                 <p class="event-meta-value">${count} / ${max}</p>
@@ -789,6 +794,9 @@ function openEditEventForm(eventId) {
     const statusEl = document.getElementById('new-event-status');
     if (statusEl) statusEl.value = event.status || 'open';
 
+    const certCb = document.getElementById('new-event-has-certificate');
+    if (certCb) certCb.checked = !!event.hasCertificate;
+
     document.getElementById('event-form-modal').style.display = 'flex';
 }
 
@@ -801,7 +809,8 @@ function addEvent() {
     const desc        = document.getElementById('new-event-description')?.value.trim() || '';
     const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
     const reserve     = parseInt(document.getElementById('new-event-reserve')?.value) || 0;
-    const needsForm   = document.getElementById('new-event-requires-form')?.checked || false;
+    const needsForm       = document.getElementById('new-event-requires-form')?.checked || false;
+    const hasCertificate  = document.getElementById('new-event-has-certificate')?.checked || false;
 
     if (!title) { showNotification('Введите название мероприятия', 'error'); return; }
     if (!date)  { showNotification('Введите дату мероприятия', 'error'); return; }
@@ -837,6 +846,7 @@ function addEvent() {
                 requiresForm:    needsForm,
                 formFields,
                 status,
+                hasCertificate,
                 attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
         }
@@ -855,6 +865,7 @@ function addEvent() {
             requiresForm:    needsForm,
             formFields,
             status:          'open',
+            hasCertificate,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
@@ -905,6 +916,9 @@ function resetEventForm() {
     if (statusSection) statusSection.style.display = 'none';
     const statusEl = document.getElementById('new-event-status');
     if (statusEl) statusEl.value = 'open';
+
+    const certCb = document.getElementById('new-event-has-certificate');
+    if (certCb) certCb.checked = false;
 }
 
 /* ================================================================
@@ -1043,7 +1057,7 @@ function renderMyEventsSection() {
     const apps = getApplications();
     container.innerHTML = myEvents.map(e => {
         const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
-        const canSeeCert = e.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = e.hasCertificate && e.status === 'completed' && myApp?.status === 'approved';
         return buildEventCardHTML(e, canSeeCert);
     }).join('');
 }
@@ -1172,13 +1186,15 @@ function showCertificate(eventId) {
     const dateTopPercent = isOrganizer ? '81' : '79';
 
     const certHTML = `
-        <div class="certificate-container" id="cert-print-area">
-            <img src="${certImage}" alt="Сертификат" onerror="this.style.display='none'">
-            <div class="cert-name-overlay" style="top:${nameTopPercent}%;font-size:${nameSize};">
-                ${escapeHTML(user.fullName)}
-            </div>
-            <div class="cert-date-overlay" style="top:${dateTopPercent}%;font-size:16px;">
-                ${escapeHTML(event.date)}
+        <div style="text-align:center;">
+            <div class="certificate-container" id="cert-print-area"
+                 style="background:url('${certImage}') center/cover no-repeat,linear-gradient(135deg,#fdf6e3 0%,#f5e6c8 100%);">
+                <div class="cert-name-overlay" style="top:${nameTopPercent}%;font-size:${nameSize};">
+                    ${escapeHTML(user.fullName)}
+                </div>
+                <div class="cert-date-overlay" style="top:${dateTopPercent}%;font-size:16px;">
+                    ${escapeHTML(event.date)}
+                </div>
             </div>
         </div>
         <div style="text-align:center;margin-top:24px;">
@@ -1205,14 +1221,19 @@ function printCertificate() {
         <html>
         <head>
             <meta charset="UTF-8">
-            <title>Сертификат участника</title>
+            <title>Сертификат</title>
             <style>
                 @media print { button { display: none !important; } }
                 body { margin:0; padding:20px; display:flex; justify-content:center;
-                       align-items:center; min-height:100vh; font-family:Arial,sans-serif; }
-                .certificate-container { position:relative; display:inline-block;
-                                         max-width:800px; width:100%; }
-                .certificate-container img { width:100%; border-radius:8px; }
+                       align-items:center; min-height:100vh; font-family:Arial,sans-serif;
+                       background:#fff; }
+                .certificate-container {
+                    position:relative; display:block;
+                    max-width:800px; width:100%;
+                    aspect-ratio:1.414/1; min-height:400px;
+                    border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.18);
+                    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+                }
                 .cert-name-overlay {
                     position:absolute; left:50%; transform:translate(-50%,-50%);
                     text-align:center; width:80%;

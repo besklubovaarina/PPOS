@@ -34,13 +34,21 @@ function saveEventsToStorage(events) {
 }
 
 /* ---------- Участники группы ---------- */
-function getGroupMembersFromStorage() {
-    const raw = localStorage.getItem(KEYS.GROUP_MEMBERS);
+function getGroupMembersFromStorage(groupName) {
+    const key = groupName ? 'ppos_group_members_' + groupName : KEYS.GROUP_MEMBERS;
+    const raw = localStorage.getItem(key);
+    // Fallback for old single-key storage (3215д)
+    if (!raw && !groupName) return null;
+    if (!raw && groupName === '3215д') {
+        const old = localStorage.getItem(KEYS.GROUP_MEMBERS);
+        return old ? JSON.parse(old) : null;
+    }
     return raw ? JSON.parse(raw) : null;
 }
 
-function saveGroupMembersToStorage(members) {
-    localStorage.setItem(KEYS.GROUP_MEMBERS, JSON.stringify(members));
+function saveGroupMembersToStorage(members, groupName) {
+    const key = groupName ? 'ppos_group_members_' + groupName : KEYS.GROUP_MEMBERS;
+    localStorage.setItem(key, JSON.stringify(members));
 }
 
 /* ---------- Группы института ---------- */

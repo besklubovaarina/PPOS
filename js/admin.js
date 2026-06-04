@@ -693,6 +693,7 @@ function renderAdminStats(container) {
    УПРАВЛЕНИЕ ГРУППАМИ ИНСТИТУТА
    ================================================================ */
 let isEditingInstitute = false;
+let currentInstituteTab = 'ИИТиФМО';
 
 function renderInstituteGroupsSection() {
     const container = document.getElementById('institute-groups-content');
@@ -702,42 +703,130 @@ function renderInstituteGroupsSection() {
         container.innerHTML = `
             <div class="restricted-access">
                 <span class="lock-icon">🔒</span>
-                <p>Для просмотра групп института необходимо войти в личный кабинет</p>
+                <p>Для просмотра групп необходимо войти в личный кабинет</p>
                 <button class="login-prompt-btn" onclick="showLoginDialog()">Войти</button>
             </div>`;
         return;
     }
 
-    const admin  = isAdmin();
-    const groups = getInstGroupsFromStorage() || DEFAULT_INST_GROUPS;
+    const admin = isAdmin();
+    const user  = getCurrentUser();
 
-    let html = '<div class="grid-6">';
+    if (!admin) {
+        // Student: only show their own group
+        const groupName = user?.groupNumber;
+        if (!groupName) {
+            container.innerHTML = '<p style="text-align:center;color:#6b7280;padding:40px 0;">Группа не указана в профиле</p>';
+            return;
+        }
 
+        const members = _getGroupMembers(groupName);
+        const users   = getUsers();
+
+        let html = `<p style="font-weight:700;color:#033b7c;font-size:20px;margin-bottom:20px;">Ваша группа: ${escapeHTML(groupName)}</p>`;
+        html += '<div class="grid-7">';
+        members.forEach(m => {
+            const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);
+            const av = ud?.avatarDataUrl || 'images/default-avatar.png';
+            const rl = ud?.role || 'Студент';
+            html += `
+                <div class="member-card">
+                    <div class="member-avatar">
+                        <img src="${av}" alt="${escapeHTML(m.name)}" onerror="this.src='images/default-avatar.png'">
+                    </div>
+                    <p class="member-name">${escapeHTML(m.name)}</p>
+                    <span class="member-role-badge">${escapeHTML(rl)}</span>
+                </div>`;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+        return;
+    }
+
+    // Admin: show institute tabs + groups grid
+    const instName = currentInstituteTab;
+    const groups   = INSTITUTE_GROUPS[instName] || [];
+
+    // Build tabs HTML
+    let tabsHtml = '<div class="institute-tabs">';
+    INSTITUTES.forEach(inst => {
+        const active = inst.name === instName ? ' active' : '';
+        tabsHtml += `<button class="inst-tab${active}" onclick="switchInstituteTab('${inst.name}')">${escapeHTML(inst.name)}</button>`;
+    });
+    tabsHtml += '</div>';
+
+    // Build groups grid
+    let gridHtml = '<div class="grid-6" style="margin-top:20px;">';
     groups.forEach(g => {
-        html += `
-            <div class="member-card">
-                <div class="group-avatar" style="position:relative;">
-                    ${(admin && isEditingInstitute)
-                        ? `<button class="delete-badge" onclick="deleteInstGroup('${g.id}')">✕</button>`
-                        : ''}
-                    <p class="group-name">${escapeHTML(g.name)}</p>
+        const hasMem = !!(DEFAULT_GROUP_MEMBERS_MAP[g] && DEFAULT_GROUP_MEMBERS_MAP[g].length > 0);
+        const badge  = hasMem ? '<span style="position:absolute;top:6px;right:6px;background:#22c55e;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;">✓</span>' : '';
+        gridHtml += `
+            <div class="member-card" style="cursor:pointer;" onclick="showGroupMembers('${escapeHTML(g)}')">
+                <div class="group-avatar" style="cursor:pointer;">
+                    ${badge}
+                    <p class="group-name" style="font-size:${g.length > 5 ? '28px' : '38px'};">${escapeHTML(g)}</p>
                 </div>
             </div>`;
     });
 
-    if (admin && isEditingInstitute) {
-        html += `
+    // Add/delete buttons in edit mode
+    if (isEditingInstitute) {
+        gridHtml += `
             <div class="member-card">
                 <button class="add-circle-btn dark" title="Добавить группу"
-                        onclick="document.getElementById('add-group-form').style.display='block'">
-                    +
-                </button>
+                        onclick="document.getElementById('add-group-form').style.display='block'">+</button>
                 <p class="member-name">Добавить</p>
             </div>`;
     }
+    gridHtml += '</div>';
 
-    html += '</div>';
-    container.innerHTML = html;
+    container.innerHTML = tabsHtml + gridHtml;
+}
+
+function switchInstituteTab(name) {
+    currentInstituteTab = name;
+    renderInstituteGroupsSection();
+}
+
+function _getGroupMembers(groupName) {
+    const stored = getGroupMembersFromStorage(groupName);
+    if (stored) return stored;
+    return DEFAULT_GROUP_MEMBERS_MAP[groupName] || [];
+}
+
+function showGroupMembers(groupName) {
+    const members = _getGroupMembers(groupName);
+    const users   = getUsers();
+
+    if (members.length === 0) {
+        showNotification('Состав группы ' + groupName + ' не добавлен', 'warning');
+        return;
+    }
+
+    let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="color:#033b7c;font-size:22px;font-weight:700;">Группа ${escapeHTML(groupName)}</h3>
+        </div>
+        <div class="grid-7">`;
+
+    members.forEach(m => {
+        const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);
+        const av = ud?.avatarDataUrl || 'images/default-avatar.png';
+        const rl = ud?.role || 'Студент';
+        html += `
+            <div class="member-card">
+                <div class="member-avatar">
+                    <img src="${av}" alt="${escapeHTML(m.name)}" onerror="this.src='images/default-avatar.png'">
+                </div>
+                <p class="member-name">${escapeHTML(m.name)}</p>
+                <span class="member-role-badge">${escapeHTML(rl)}</span>
+            </div>`;
+    });
+
+    html += `</div>`;
+
+    document.getElementById('description-content').innerHTML = html;
+    document.getElementById('description-modal').style.display = 'flex';
 }
 
 function toggleInstituteEdit() {
