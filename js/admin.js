@@ -358,11 +358,9 @@ function renderApplicationsOverview(container) {
                         <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
                             Word
                         </button>
-                        ${event.status === 'completed'
-                            ? `<span class="status-badge badge-approved" style="align-self:center;">Завершено</span>`
-                            : event.status === 'closed'
-                                ? `<button class="btn-enroll" style="background:#10b981;border-color:#10b981;" onclick="adminReopenEvent('${event.id}')">Возобновить прием заявок</button>`
-                                : `<button class="btn-reserve" onclick="adminCloseEvent('${event.id}')">Завершить прием заявок</button>`
+                        ${event.status === 'open'
+                            ? `<button class="btn-reserve" onclick="adminCloseEvent('${event.id}')">Завершить прием заявок</button>`
+                            : `<button class="btn-enroll" style="background:#10b981;border-color:#10b981;" onclick="adminReopenEvent('${event.id}')">Возобновить прием заявок</button>`
                         }
                     </div>
                 </div>`;
@@ -741,7 +739,17 @@ function renderInstituteGroupsSection() {
         const members = _getGroupMembers(groupName);
         const users   = getUsers();
 
-        let html = `<p style="font-weight:700;color:#033b7c;font-size:20px;margin-bottom:20px;">Ваша группа: ${escapeHTML(groupName)}</p>`;
+        // Find the student's institute
+        let instituteName = '';
+        for (const [inst, groups] of Object.entries(INSTITUTE_GROUPS)) {
+            if (groups.includes(groupName)) { instituteName = inst; break; }
+        }
+
+        let html = '';
+        if (instituteName) {
+            html += `<p style="font-weight:600;color:#6b7280;font-size:15px;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">${escapeHTML(instituteName)}</p>`;
+        }
+        html += `<p style="font-weight:700;color:#033b7c;font-size:20px;margin-bottom:20px;">Ваша группа: ${escapeHTML(groupName)}</p>`;
         html += '<div class="grid-7">';
         members.forEach(m => {
             const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);

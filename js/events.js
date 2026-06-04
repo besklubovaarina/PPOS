@@ -673,13 +673,9 @@ function cancelEnroll(eventId) {
     const user = getCurrentUser();
     user.enrolledEvents = (user.enrolledEvents || []).filter(id => id !== eventId);
 
-    // Удаляем pending / reserve заявку (approved оставляем — информация для admin)
+    // Удаляем все заявки студента на это мероприятие
     let apps = getApplications();
-    apps = apps.filter(a => !(
-        a.eventId === eventId &&
-        a.username === user.username &&
-        (a.status === 'pending' || a.status === 'reserve')
-    ));
+    apps = apps.filter(a => !(a.eventId === eventId && a.username === user.username));
     saveApplications(apps);
 
     setCurrentUser(user);
