@@ -400,12 +400,10 @@ function openRegistrationModal(eventId) {
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
 
-    // Блок выбора роли (только для активистов и председателей)
+    // Блок выбора роли — показываем если мероприятие разрешает регистрацию организатором
     const roleBlock = document.getElementById('reg-role-block');
     if (roleBlock) {
-        const showRole = user.role === 'Активист профбюро' || user.role === 'Председатель';
-        roleBlock.style.display = showRole ? 'block' : 'none';
-        // Сброс радио на "participant"
+        roleBlock.style.display = event.allowOrganizerRole ? 'block' : 'none';
         const participantRadio = document.querySelector('input[name="reg-role"][value="participant"]');
         if (participantRadio) participantRadio.checked = true;
     }
@@ -792,6 +790,9 @@ function openEditEventForm(eventId) {
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = !!event.hasCertificate;
 
+    const orgCb = document.getElementById('new-event-allow-organizer');
+    if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
+
     document.getElementById('event-form-modal').style.display = 'flex';
 }
 
@@ -803,8 +804,9 @@ function addEvent() {
     const type        = document.getElementById('new-event-type')?.value           || 'star';
     const desc        = document.getElementById('new-event-description')?.value.trim() || '';
     const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
-    const needsForm       = document.getElementById('new-event-requires-form')?.checked || false;
-    const hasCertificate  = document.getElementById('new-event-has-certificate')?.checked || false;
+    const needsForm          = document.getElementById('new-event-requires-form')?.checked   || false;
+    const hasCertificate     = document.getElementById('new-event-has-certificate')?.checked  || false;
+    const allowOrganizerRole = document.getElementById('new-event-allow-organizer')?.checked  || false;
 
     if (!title) { showNotification('Введите название мероприятия', 'error'); return; }
     if (!date)  { showNotification('Введите дату мероприятия', 'error'); return; }
@@ -834,14 +836,15 @@ function addEvent() {
                 date,
                 time,
                 type,
-                description:     desc,
-                maxParticipants: max,
-                reserveCount:    events[idx].reserveCount || 0,
-                requiresForm:    needsForm,
+                description:      desc,
+                maxParticipants:  max,
+                reserveCount:     events[idx].reserveCount || 0,
+                requiresForm:     needsForm,
                 formFields,
                 status,
                 hasCertificate,
-                attachments:     adminEventAttachments.map(f => ({ ...f })),
+                allowOrganizerRole,
+                attachments:      adminEventAttachments.map(f => ({ ...f })),
             };
         }
         showNotification('Мероприятие обновлено', 'success');
@@ -860,6 +863,7 @@ function addEvent() {
             formFields,
             status:          'open',
             hasCertificate,
+            allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
@@ -913,6 +917,9 @@ function resetEventForm() {
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = false;
+
+    const orgCb = document.getElementById('new-event-allow-organizer');
+    if (orgCb) orgCb.checked = false;
 }
 
 /* ================================================================
