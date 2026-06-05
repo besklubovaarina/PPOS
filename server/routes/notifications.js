@@ -1,34 +1,31 @@
-// notifications.js — уведомления пользователей
+// notifications.js — уведомления студентов
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-// Получить уведомления пользователя
-router.get('/:username', async (req, res) => {
+// Уведомления студента по его id
+router.get('/:studentId', async (req, res) => {
     try {
-        const result = await pool.query(
-            `SELECT * FROM notifications WHERE username=$1 ORDER BY created_at DESC LIMIT 100`,
-            [req.params.username]
+        const r = await pool.query(
+            `SELECT id,"Тип","Сообщение","Мероприятие","Прочитано","Дата"
+             FROM "Уведомления"
+             WHERE "id_Студент"=$1
+             ORDER BY "Дата" DESC LIMIT 100`,
+            [req.params.studentId]
         );
-        res.json({ success: true, notifications: result.rows });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+        res.json({ success: true, notifications: r.rows });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Пометить все уведомления как прочитанные
-router.put('/:username/read', async (req, res) => {
+// Пометить все как прочитанные
+router.put('/:studentId/read', async (req, res) => {
     try {
         await pool.query(
-            'UPDATE notifications SET read=TRUE WHERE username=$1',
-            [req.params.username]
+            'UPDATE "Уведомления" SET "Прочитано"=TRUE WHERE "id_Студент"=$1',
+            [req.params.studentId]
         );
         res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
 module.exports = router;

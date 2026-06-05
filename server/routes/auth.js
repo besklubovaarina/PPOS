@@ -1,45 +1,48 @@
 // auth.js — вход и регистрация
-// Маршруты: POST /api/auth/login, POST /api/auth/register
-
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-// Вход в систему
-// Фронтенд отправляет { username, password }
-// Сервер проверяет в таблице users и возвращает данные пользователя
+// Вход: ищем по логину в Данные_входа → берём студента
 router.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
         const result = await pool.query(
-            'SELECT * FROM users WHERE username = $1',
+            `SELECT д.id as auth_id, д."Логин", д."Пароль",
+                    с.id as student_id, с."ФИО", с."Телефон", с."Email",
+                    с."Аватар", с."Роль", с."is_admin",
+                    г."Номер" as group_number,
+                    и."Название" as institute
+             FROM "Данные_входа" д
+             JOIN "Студент" с ON с."id_Данные_входа" = д.id
+             LEFT JOIN "Группа" г ON с."id_Группа" = г.id
+             LEFT JOIN "Институт" и ON г."id_Институт" = и.id
+             WHERE д."Логин" = $1`,
             [username]
         );
 
-        if (result.rows.length === 0) {
+        if (result.rows.length === 0)
             return res.json({ success: false, error: 'Пользователь не найден' });
-        }
 
-        const user = result.rows[0];
+        const row = result.rows[0];
 
-        if (user.password !== password) {
+        if (row['Пароль'] !== password)
             return res.json({ success: false, error: 'Неверный пароль' });
-        }
 
-        // Возвращаем данные в том же формате, что ожидает фронтенд
         res.json({
             success: true,
             user: {
-                username:     user.username,
-                fullName:     user.full_name    || '',
-                groupNumber:  user.group_number || '',
-                phone:        user.phone        || '',
-                email:        user.email        || '',
-                role:         user.role         || 'Студент',
-                isAdmin:      user.is_admin,
-                avatarDataUrl: user.avatar_data || '',
-                institute:    user.institute    || '',
+                username:      row['Логин'],
+                fullName:      row['ФИО']          || '',
+                groupNumber:   row['group_number'] || '',
+                phone:         row['Телефон']      || '',
+                email:         row['Email']        || '',
+                role:          row['Роль']         || 'Студент',
+                isAdmin:       row['is_admin'],
+                avatarDataUrl: row['Аватар']       || '',
+                institute:     row['institute']    || '',
+                studentId:     row['student_id'],
                 enrolledEvents: [],
             }
         });
@@ -50,27 +53,42 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// Регистрация нового пользователя
+// Регистрация
 router.post('/register', async (req, res) => {
     try {
         const { username, password, fullName, groupNumber } = req.body;
 
-        if (!username || !password) {
+        if (!username || !password)
             return res.json({ success: false, error: 'Логин и пароль обязательны' });
-        }
 
-        // Проверяем — не занят ли логин
+        // Проверяем занят ли логин
         const exists = await pool.query(
-            'SELECT id FROM users WHERE username = $1', [username]
+            'SELECT id FROM "Данные_входа" WHERE "Логин" = $1', [username]
         );
-        if (exists.rows.length > 0) {
+        if (exists.rows.length > 0)
             return res.json({ success: false, error: 'Такой логин уже занят' });
+
+        // Создаём запись входа
+        const authResult = await pool.query(
+            'INSERT INTO "Данные_входа" ("Логин","Пароль") VALUES ($1,$2) RETURNING id',
+            [username, password]
+        );
+        const authId = authResult.rows[0].id;
+
+        // Находим группу если передана
+        let groupId = null;
+        if (groupNumber) {
+            const grp = await pool.query(
+                'SELECT id FROM "Группа" WHERE "Номер" = $1', [groupNumber]
+            );
+            groupId = grp.rows[0]?.id || null;
         }
 
+        // Создаём студента
         await pool.query(
-            `INSERT INTO users (username, password, full_name, group_number)
-             VALUES ($1, $2, $3, $4)`,
-            [username, password, fullName || '', groupNumber || '']
+            `INSERT INTO "Студент" ("ФИО","id_Данные_входа","id_Группа")
+             VALUES ($1,$2,$3)`,
+            [fullName || '', authId, groupId]
         );
 
         res.json({ success: true, message: 'Регистрация прошла успешно' });

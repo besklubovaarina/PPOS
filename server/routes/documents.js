@@ -1,106 +1,159 @@
-// documents.js — документы студентов и документы для скачивания
+// documents.js — заявления, протоколы собраний, документы для скачивания
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-// Получить документы для скачивания
+// ─── Документы для скачивания (admin управляет) ───────────────────
+
 router.get('/downloadable', async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT id, name, created_at FROM downloadable_docs ORDER BY created_at DESC'
+        const r = await pool.query(
+            'SELECT id,"Название","Дата_добавления" FROM "Документы_для_скачивания" ORDER BY "Дата_добавления" DESC'
         );
-        res.json({ success: true, docs: result.rows });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+        res.json({ success: true, docs: r.rows });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Скачать конкретный документ (возвращает data)
 router.get('/downloadable/:id/data', async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT name, file_data FROM downloadable_docs WHERE id=$1', [req.params.id]
+        const r = await pool.query(
+            'SELECT "Название","Файл" FROM "Документы_для_скачивания" WHERE id=$1', [req.params.id]
         );
-        if (result.rows.length === 0)
-            return res.json({ success: false, error: 'Файл не найден' });
-        res.json({ success: true, name: result.rows[0].name, data: result.rows[0].file_data });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+        if (r.rows.length === 0) return res.json({ success: false, error: 'Файл не найден' });
+        res.json({ success: true, name: r.rows[0]['Название'], data: r.rows[0]['Файл'] });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Добавить документ для скачивания (только admin)
 router.post('/downloadable', async (req, res) => {
     try {
         const { id, name, fileData } = req.body;
         await pool.query(
-            'INSERT INTO downloadable_docs (id, name, file_data) VALUES ($1,$2,$3)',
+            'INSERT INTO "Документы_для_скачивания" (id,"Название","Файл") VALUES ($1,$2,$3)',
             [id, name, fileData]
         );
         res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Удалить документ для скачивания
 router.delete('/downloadable/:id', async (req, res) => {
     try {
-        await pool.query('DELETE FROM downloadable_docs WHERE id=$1', [req.params.id]);
+        await pool.query('DELETE FROM "Документы_для_скачивания" WHERE id=$1', [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Загрузить документ студента (заявление)
-router.post('/user/:username', async (req, res) => {
+// ─── Заявление в бухгалтерию ─────────────────────────────────────
+
+router.post('/accounting/:studentId', async (req, res) => {
     try {
-        const { docType, name, fileData } = req.body;
+        const { name, fileData } = req.body;
+        const r = await pool.query(
+            `INSERT INTO "Заявление_в_бухгалтерию" ("Дата_написания","Файл")
+             VALUES (CURRENT_DATE,$1) RETURNING id`,
+            [fileData]
+        );
         await pool.query(
-            `INSERT INTO user_documents (username, doc_type, name, file_data)
-             VALUES ($1,$2,$3,$4)
-             ON CONFLICT (username, doc_type) DO UPDATE
-             SET name=$3, file_data=$4`,
-            [req.params.username, docType, name, fileData]
+            'UPDATE "Студент" SET "id_Заявление_в_бухгалтерию"=$1 WHERE id=$2',
+            [r.rows[0].id, req.params.studentId]
         );
-        res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+        res.json({ success: true, docId: r.rows[0].id });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Получить документы студента
-router.get('/user/:username', async (req, res) => {
+router.get('/accounting/:studentId/data', async (req, res) => {
     try {
-        const result = await pool.query(
-            'SELECT id, doc_type, name, created_at FROM user_documents WHERE username=$1',
-            [req.params.username]
+        const r = await pool.query(
+            `SELECT з."Файл", з."Дата_написания"
+             FROM "Заявление_в_бухгалтерию" з
+             JOIN "Студент" с ON с."id_Заявление_в_бухгалтерию"=з.id
+             WHERE с.id=$1`,
+            [req.params.studentId]
         );
-        res.json({ success: true, docs: result.rows });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+        if (r.rows.length === 0) return res.json({ success: false });
+        res.json({ success: true, data: r.rows[0]['Файл'] });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-// Удалить документ студента
-router.delete('/user/:username/:id', async (req, res) => {
+// ─── Заявление на вступление в профсоюз ─────────────────────────
+
+router.post('/join/:studentId', async (req, res) => {
     try {
+        const { fileData } = req.body;
+        const r = await pool.query(
+            `INSERT INTO "Заявление_на_вступление" ("Дата","Файл","id_Студент")
+             VALUES (CURRENT_DATE,$1,$2) RETURNING id`,
+            [fileData, req.params.studentId]
+        );
         await pool.query(
-            'DELETE FROM user_documents WHERE id=$1 AND username=$2',
-            [req.params.id, req.params.username]
+            'UPDATE "Студент" SET "id_Заявление_на_вступление"=$1 WHERE id=$2',
+            [r.rows[0].id, req.params.studentId]
         );
+        res.json({ success: true, docId: r.rows[0].id });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+router.get('/join/:studentId/data', async (req, res) => {
+    try {
+        const r = await pool.query(
+            `SELECT з."Файл", з."Дата"
+             FROM "Заявление_на_вступление" з
+             JOIN "Студент" с ON с."id_Заявление_на_вступление"=з.id
+             WHERE с.id=$1`,
+            [req.params.studentId]
+        );
+        if (r.rows.length === 0) return res.json({ success: false });
+        res.json({ success: true, data: r.rows[0]['Файл'] });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+// ─── Протоколы собраний ──────────────────────────────────────────
+
+router.get('/protocols', async (req, res) => {
+    try {
+        const r = await pool.query(
+            `SELECT п.id, п."Номер_протокола", п."Дата",
+                    п."Повестка_собрания", п."Файл_название",
+                    п."Дата_загрузки",
+                    а."Название" as auditorium,
+                    к."Название" as building
+             FROM "Протокол_собрания" п
+             LEFT JOIN "Аудитория" а ON п."id_Аудитория"=а.id
+             LEFT JOIN "Корпус" к ON а."id_Корпус"=к.id
+             ORDER BY п."Дата" DESC`
+        );
+        res.json({ success: true, protocols: r.rows });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+router.get('/protocols/:id/data', async (req, res) => {
+    try {
+        const r = await pool.query(
+            'SELECT "Файл_название","Файл" FROM "Протокол_собрания" WHERE id=$1', [req.params.id]
+        );
+        if (r.rows.length === 0) return res.json({ success: false, error: 'Файл не найден' });
+        res.json({ success: true, name: r.rows[0]['Файл_название'], data: r.rows[0]['Файл'] });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+router.post('/protocols', async (req, res) => {
+    try {
+        const { number, date, agenda, presentCount, fileName, fileData } = req.body;
+        const r = await pool.query(
+            `INSERT INTO "Протокол_собрания"
+             ("Номер_протокола","Дата","Повестка_собрания",
+              "Число_присутствующих","Файл_название","Файл")
+             VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+            [number, date || null, agenda, presentCount || 0, fileName, fileData]
+        );
+        res.json({ success: true, id: r.rows[0].id });
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
+});
+
+router.delete('/protocols/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM "Протокол_собрания" WHERE id=$1', [req.params.id]);
         res.json({ success: true });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
+    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
 module.exports = router;

@@ -1,35 +1,29 @@
 // events.js — мероприятия
-// GET  /api/events          — список всех мероприятий
-// POST /api/events          — создать (только admin)
-// PUT  /api/events/:id      — редактировать
-// DELETE /api/events/:id    — удалить
-
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-// Получить все мероприятия
+// Все мероприятия
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT * FROM events ORDER BY created_at DESC'
+            'SELECT * FROM "Мероприятие" ORDER BY "Дата_создания" DESC'
         );
-        res.json({ success: true, events: result.rows });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
-});
-
-// Получить одно мероприятие
-router.get('/:id', async (req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT * FROM events WHERE id = $1', [req.params.id]
-        );
-        if (result.rows.length === 0)
-            return res.json({ success: false, error: 'Мероприятие не найдено' });
-        res.json({ success: true, event: result.rows[0] });
+        const events = result.rows.map(e => ({
+            id:                  e.id.toString(),
+            title:               e['Название'],
+            description:         e['Описание']        || '',
+            date:                e['Дата']             ? new Date(e['Дата']).toLocaleDateString('ru-RU') : '',
+            time:                e['Время']            ? e['Время'].substring(0,5) : '',
+            type:                e['Тип']              || '',
+            location:            e['Место']            || '',
+            maxParticipants:     e['Макс_участников']  || 0,
+            status:              e['Статус']           || 'open',
+            hasCertificate:      e['Есть_сертификат'],
+            allowOrganizerRole:  e['Разрешить_организатора'],
+            imageUrl:            e['Изображение']      || '',
+        }));
+        res.json({ success: true, events });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
@@ -39,28 +33,26 @@ router.get('/:id', async (req, res) => {
 // Создать мероприятие
 router.post('/', async (req, res) => {
     try {
-        const {
-            title, description, date, time, type, location,
-            max_participants, status, has_certificate,
-            allow_organizer_role, image_url,
-            cert_participant_data, cert_organizer_data
-        } = req.body;
+        const { title, description, date, time, type, location,
+                maxParticipants, status, hasCertificate,
+                allowOrganizerRole, imageUrl,
+                certParticipantData, certOrganizerData } = req.body;
 
         const result = await pool.query(
-            `INSERT INTO events
-             (title, description, date, time, type, location,
-              max_participants, status, has_certificate,
-              allow_organizer_role, image_url,
-              cert_participant_data, cert_organizer_data)
+            `INSERT INTO "Мероприятие"
+             ("Название","Описание","Дата","Время","Тип","Место",
+              "Макс_участников","Статус","Есть_сертификат",
+              "Разрешить_организатора","Изображение",
+              "Шаблон_сертификата_участника","Шаблон_сертификата_организатора")
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-             RETURNING *`,
-            [title, description, date, time, type, location,
-             max_participants || 0, status || 'open',
-             has_certificate || false, allow_organizer_role || false,
-             image_url || null, cert_participant_data || null, cert_organizer_data || null]
+             RETURNING id`,
+            [title, description, date || null, time || null, type, location,
+             maxParticipants || 0, status || 'open',
+             hasCertificate || false, allowOrganizerRole || false,
+             imageUrl || null, certParticipantData || null, certOrganizerData || null]
         );
 
-        res.json({ success: true, event: result.rows[0] });
+        res.json({ success: true, id: result.rows[0].id.toString() });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
@@ -70,27 +62,25 @@ router.post('/', async (req, res) => {
 // Редактировать мероприятие
 router.put('/:id', async (req, res) => {
     try {
-        const {
-            title, description, date, time, type, location,
-            max_participants, status, has_certificate,
-            allow_organizer_role, image_url,
-            cert_participant_data, cert_organizer_data
-        } = req.body;
+        const { title, description, date, time, type, location,
+                maxParticipants, status, hasCertificate,
+                allowOrganizerRole, imageUrl,
+                certParticipantData, certOrganizerData } = req.body;
 
         await pool.query(
-            `UPDATE events SET
-             title=$1, description=$2, date=$3, time=$4, type=$5,
-             location=$6, max_participants=$7, status=$8,
-             has_certificate=$9, allow_organizer_role=$10,
-             image_url=$11, cert_participant_data=$12, cert_organizer_data=$13
+            `UPDATE "Мероприятие" SET
+             "Название"=$1,"Описание"=$2,"Дата"=$3,"Время"=$4,"Тип"=$5,
+             "Место"=$6,"Макс_участников"=$7,"Статус"=$8,
+             "Есть_сертификат"=$9,"Разрешить_организатора"=$10,
+             "Изображение"=$11,"Шаблон_сертификата_участника"=$12,
+             "Шаблон_сертификата_организатора"=$13
              WHERE id=$14`,
-            [title, description, date, time, type, location,
-             max_participants, status, has_certificate,
-             allow_organizer_role, image_url,
-             cert_participant_data, cert_organizer_data, req.params.id]
+            [title, description, date || null, time || null, type, location,
+             maxParticipants, status, hasCertificate, allowOrganizerRole,
+             imageUrl || null, certParticipantData, certOrganizerData, req.params.id]
         );
 
-        res.json({ success: true, message: 'Мероприятие обновлено' });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
@@ -100,8 +90,8 @@ router.put('/:id', async (req, res) => {
 // Удалить мероприятие
 router.delete('/:id', async (req, res) => {
     try {
-        await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
-        res.json({ success: true, message: 'Мероприятие удалено' });
+        await pool.query('DELETE FROM "Мероприятие" WHERE id=$1', [req.params.id]);
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });

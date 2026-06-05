@@ -1,24 +1,29 @@
-// applications.js — заявки на мероприятия
-// GET    /api/applications               — все заявки (для admin)
-// GET    /api/applications/event/:id     — заявки на конкретное мероприятие
-// POST   /api/applications               — подать заявку
-// PUT    /api/applications/:id/approve   — одобрить
-// PUT    /api/applications/:id/reject    — отклонить
-// PUT    /api/applications/:id/reserve   — в резерв
-// DELETE /api/applications/:id           — удалить (отмена записи)
-
+// applications.js — Согласие_на_обработку_перс_данных_на_мероприятие
+// (заявки студентов на участие в мероприятиях)
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-// Все заявки
+const TABLE = '"Согласие_на_обработку_перс_данных_на_мероприятие"';
+
+// Все заявки (для admin)
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT a.*, e.title as event_title, e.date as event_date
-             FROM applications a
-             JOIN events e ON a.event_id = e.id
-             ORDER BY a.created_at DESC`
+            `SELECT с.id, с."Номер", с."Дата", с."Статус", с."Роль_участника",
+                    с."id_Мероприятие" as event_id,
+                    с."id_Студент" as student_id,
+                    м."Название" as event_title,
+                    м."Дата" as event_date,
+                    ст."ФИО" as full_name,
+                    г."Номер" as group_number,
+                    д."Логин" as username
+             FROM ${TABLE} с
+             JOIN "Мероприятие" м ON с."id_Мероприятие" = м.id
+             JOIN "Студент" ст    ON с."id_Студент" = ст.id
+             LEFT JOIN "Группа" г ON ст."id_Группа" = г.id
+             LEFT JOIN "Данные_входа" д ON ст."id_Данные_входа" = д.id
+             ORDER BY с."Дата" DESC`
         );
         res.json({ success: true, applications: result.rows });
     } catch (err) {
@@ -27,15 +32,20 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Заявки конкретного мероприятия
+// Заявки на конкретное мероприятие
 router.get('/event/:id', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT a.*, u.full_name, u.group_number
-             FROM applications a
-             JOIN users u ON a.username = u.username
-             WHERE a.event_id = $1
-             ORDER BY a.created_at`,
+            `SELECT с.id, с."Статус", с."Роль_участника", с."Дата",
+                    ст."ФИО" as full_name,
+                    г."Номер" as group_number,
+                    д."Логин" as username
+             FROM ${TABLE} с
+             JOIN "Студент" ст    ON с."id_Студент" = ст.id
+             LEFT JOIN "Группа" г ON ст."id_Группа" = г.id
+             LEFT JOIN "Данные_входа" д ON ст."id_Данные_входа" = д.id
+             WHERE с."id_Мероприятие" = $1
+             ORDER BY с."Дата"`,
             [req.params.id]
         );
         res.json({ success: true, applications: result.rows });
@@ -45,16 +55,21 @@ router.get('/event/:id', async (req, res) => {
     }
 });
 
-// Заявки конкретного пользователя
-router.get('/user/:username', async (req, res) => {
+// Заявки конкретного студента
+router.get('/student/:studentId', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT a.*, e.title as event_title, e.date, e.time, e.status as event_status
-             FROM applications a
-             JOIN events e ON a.event_id = e.id
-             WHERE a.username = $1
-             ORDER BY a.created_at DESC`,
-            [req.params.username]
+            `SELECT с.id, с."Статус", с."Роль_участника",
+                    с."id_Мероприятие" as event_id,
+                    м."Название" as event_title,
+                    м."Дата", м."Время",
+                    м."Статус" as event_status,
+                    м."Есть_сертификат" as has_certificate
+             FROM ${TABLE} с
+             JOIN "Мероприятие" м ON с."id_Мероприятие" = м.id
+             WHERE с."id_Студент" = $1
+             ORDER BY с."Дата" DESC`,
+            [req.params.studentId]
         );
         res.json({ success: true, applications: result.rows });
     } catch (err) {
@@ -66,71 +81,68 @@ router.get('/user/:username', async (req, res) => {
 // Подать заявку
 router.post('/', async (req, res) => {
     try {
-        const { event_id, username, role } = req.body;
+        const { eventId, studentId, role } = req.body;
 
-        // Проверяем — нет ли уже заявки
         const exists = await pool.query(
-            'SELECT id FROM applications WHERE event_id=$1 AND username=$2',
-            [event_id, username]
+            `SELECT id FROM ${TABLE} WHERE "id_Мероприятие"=$1 AND "id_Студент"=$2`,
+            [eventId, studentId]
         );
-        if (exists.rows.length > 0) {
+        if (exists.rows.length > 0)
             return res.json({ success: false, error: 'Вы уже подали заявку' });
-        }
 
         const result = await pool.query(
-            `INSERT INTO applications (event_id, username, role, status)
-             VALUES ($1, $2, $3, 'pending') RETURNING *`,
-            [event_id, username, role || 'participant']
+            `INSERT INTO ${TABLE} ("id_Мероприятие","id_Студент","Роль_участника","Статус")
+             VALUES ($1,$2,$3,'pending') RETURNING id`,
+            [eventId, studentId, role || 'participant']
         );
 
-        res.json({ success: true, application: result.rows[0] });
+        res.json({ success: true, id: result.rows[0].id });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
 
-// Одобрить заявку
+// Одобрить
 router.put('/:id/approve', async (req, res) => {
     try {
-        const result = await pool.query(
-            `UPDATE applications SET status='approved' WHERE id=$1 RETURNING *`,
+        const r = await pool.query(
+            `UPDATE ${TABLE} SET "Статус"='approved' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
-        const app = result.rows[0];
+        const { id_Студент, id_Мероприятие } = r.rows[0];
 
-        // Создаём уведомление студенту
         await pool.query(
-            `INSERT INTO notifications (username, type, message, event_title)
-             SELECT $1, 'approval', 'Ваша заявка одобрена', e.title
-             FROM events e WHERE e.id = $2`,
-            [app.username, app.event_id]
+            `INSERT INTO "Уведомления" ("id_Студент","Тип","Сообщение","Мероприятие")
+             SELECT $1,'approval','Ваша заявка одобрена',м."Название"
+             FROM "Мероприятие" м WHERE м.id=$2`,
+            [id_Студент, id_Мероприятие]
         );
 
-        res.json({ success: true, message: 'Заявка одобрена' });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
 
-// Отклонить заявку
+// Отклонить
 router.put('/:id/reject', async (req, res) => {
     try {
-        const result = await pool.query(
-            `UPDATE applications SET status='rejected' WHERE id=$1 RETURNING *`,
+        const r = await pool.query(
+            `UPDATE ${TABLE} SET "Статус"='rejected' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
-        const app = result.rows[0];
+        const { id_Студент, id_Мероприятие } = r.rows[0];
 
         await pool.query(
-            `INSERT INTO notifications (username, type, message, event_title)
-             SELECT $1, 'rejection', 'Ваша заявка отклонена', e.title
-             FROM events e WHERE e.id = $2`,
-            [app.username, app.event_id]
+            `INSERT INTO "Уведомления" ("id_Студент","Тип","Сообщение","Мероприятие")
+             SELECT $1,'rejection','Ваша заявка отклонена',м."Название"
+             FROM "Мероприятие" м WHERE м.id=$2`,
+            [id_Студент, id_Мероприятие]
         );
 
-        res.json({ success: true, message: 'Заявка отклонена' });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
@@ -140,43 +152,32 @@ router.put('/:id/reject', async (req, res) => {
 // В резерв
 router.put('/:id/reserve', async (req, res) => {
     try {
-        const result = await pool.query(
-            `UPDATE applications SET status='reserve' WHERE id=$1 RETURNING *`,
+        const r = await pool.query(
+            `UPDATE ${TABLE} SET "Статус"='reserve' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
-        const app = result.rows[0];
+        const { id_Студент, id_Мероприятие } = r.rows[0];
 
         await pool.query(
-            `INSERT INTO notifications (username, type, message, event_title)
-             SELECT $1, 'reserve', 'Вы добавлены в резервный список', e.title
-             FROM events e WHERE e.id = $2`,
-            [app.username, app.event_id]
+            `INSERT INTO "Уведомления" ("id_Студент","Тип","Сообщение","Мероприятие")
+             SELECT $1,'reserve','Вы добавлены в резервный список',м."Название"
+             FROM "Мероприятие" м WHERE м.id=$2`,
+            [id_Студент, id_Мероприятие]
         );
 
-        res.json({ success: true, message: 'Заявка в резерве' });
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
 
-// Удалить заявку (отмена)
-router.delete('/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM applications WHERE id=$1', [req.params.id]);
-        res.json({ success: true, message: 'Заявка отменена' });
-    } catch (err) {
-        console.error(err);
-        res.json({ success: false, error: 'Ошибка сервера' });
-    }
-});
-
-// Удалить все заявки пользователя на мероприятие
-router.delete('/event/:eventId/user/:username', async (req, res) => {
+// Отменить запись
+router.delete('/event/:eventId/student/:studentId', async (req, res) => {
     try {
         await pool.query(
-            'DELETE FROM applications WHERE event_id=$1 AND username=$2',
-            [req.params.eventId, req.params.username]
+            `DELETE FROM ${TABLE} WHERE "id_Мероприятие"=$1 AND "id_Студент"=$2`,
+            [req.params.eventId, req.params.studentId]
         );
         res.json({ success: true });
     } catch (err) {
