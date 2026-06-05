@@ -30,7 +30,15 @@ function getEventsFromStorage() {
 }
 
 function saveEventsToStorage(events) {
-    localStorage.setItem(KEYS.EVENTS, JSON.stringify(events));
+    try {
+        localStorage.setItem(KEYS.EVENTS, JSON.stringify(events));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            showNotification('Ошибка: файл шаблона слишком большой. Попробуйте уменьшить размер изображения.', 'error');
+        } else {
+            throw e;
+        }
+    }
 }
 
 /* ---------- Участники группы ---------- */

@@ -849,10 +849,23 @@ function handleCertFileSelect(input, role) {
     const nameEl    = document.getElementById('cert-' + role + '-name');
     const previewEl = document.getElementById('cert-' + role + '-preview');
     if (nameEl) nameEl.textContent = file.name;
+
     const reader = new FileReader();
     reader.onload = e => {
-        _certImgData[role] = e.target.result;
-        if (previewEl) { previewEl.src = e.target.result; previewEl.style.display = 'inline-block'; }
+        // Сжимаем через canvas до max 1200px и JPEG 0.82, чтобы уложиться в localStorage
+        const img = new Image();
+        img.onload = () => {
+            const MAX = 1200;
+            const scale = img.width > MAX ? MAX / img.width : 1;
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.82);
+            _certImgData[role] = compressed;
+            if (previewEl) { previewEl.src = compressed; previewEl.style.display = 'inline-block'; }
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
