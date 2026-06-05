@@ -221,7 +221,7 @@ function buildEventCardHTML(event, showCertificate = false) {
 
     // ---- Кнопка «Напомнить» (только для незаписавшихся) ----
     let reminderBtn = '';
-    if (loggedIn && !isEnrolled && event.status !== 'closed') {
+    if (loggedIn && !admin && !isEnrolled && event.status !== 'closed') {
         const reminderClass = hasReminder ? 'event-reminder-btn active' : 'event-reminder-btn';
         const reminderTitle = hasReminder ? 'Убрать напоминание' : 'Напомнить о регистрации';
         reminderBtn = `<button class="${reminderClass}" title="${reminderTitle}"
