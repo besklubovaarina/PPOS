@@ -130,11 +130,19 @@ function getEventIconHTML(type, eventId) {
 }
 
 /**
- * Считает число активных участников мероприятия (не отклонённых).
+ * Считает одобренных участников (занятые места).
  * @param {string} eventId
  */
 function getParticipantsCount(eventId) {
-    return getApplications().filter(a => a.eventId === eventId && a.status !== 'rejected').length;
+    return getApplications().filter(a => a.eventId === eventId && a.status === 'approved').length;
+}
+
+/**
+ * Считает заявки в ожидании (pending + reserve).
+ * @param {string} eventId
+ */
+function getPendingCount(eventId) {
+    return getApplications().filter(a => a.eventId === eventId && (a.status === 'pending' || a.status === 'reserve')).length;
 }
 
 /**
@@ -187,9 +195,10 @@ function buildEventCardHTML(event, showCertificate = false) {
         ? (user.reminders || []).includes(event.id)
         : false;
 
-    const count = getParticipantsCount(event.id);
-    const max   = event.maxParticipants || 0;
-    const full  = max > 0 && count >= max;
+    const count   = getParticipantsCount(event.id);
+    const pending = getPendingCount(event.id);
+    const max     = event.maxParticipants || 0;
+    const full    = max > 0 && count >= max;
 
     // ---- Кнопка записи (администратор не записывается на мероприятия) ----
     let enrollBtn = '';
@@ -269,11 +278,16 @@ function buildEventCardHTML(event, showCertificate = false) {
                                 <p class="event-meta-label">Время</p>
                                 <p class="event-meta-value">${escapeHTML(event.time)}</p>
                             </div>
-                            ${(admin && max > 0) ? `
+                            ${admin ? `
                             <div>
-                                <p class="event-meta-label">Участников</p>
-                                <p class="event-meta-value">${count} / ${max}</p>
-                            </div>` : ''}
+                                <p class="event-meta-label">Одобрено</p>
+                                <p class="event-meta-value">${count}${max > 0 ? ' / ' + max : ''}</p>
+                            </div>
+                            ${pending > 0 ? `
+                            <div>
+                                <p class="event-meta-label">Ожидают</p>
+                                <p class="event-meta-value" style="color:#d97706;">${pending}</p>
+                            </div>` : ''}` : ''}
                         </div>
                         ${getEventStatusBadge(event)}
                         ${formBadge}
@@ -400,12 +414,10 @@ function openRegistrationModal(eventId) {
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
 
-    // Блок выбора роли (только для активистов и председателей)
+    // Блок выбора роли — показываем если мероприятие разрешает регистрацию организатором
     const roleBlock = document.getElementById('reg-role-block');
     if (roleBlock) {
-        const showRole = user.role === 'Активист профбюро' || user.role === 'Председатель';
-        roleBlock.style.display = showRole ? 'block' : 'none';
-        // Сброс радио на "participant"
+        roleBlock.style.display = event.allowOrganizerRole ? 'block' : 'none';
         const participantRadio = document.querySelector('input[name="reg-role"][value="participant"]');
         if (participantRadio) participantRadio.checked = true;
     }
@@ -673,13 +685,9 @@ function cancelEnroll(eventId) {
     const user = getCurrentUser();
     user.enrolledEvents = (user.enrolledEvents || []).filter(id => id !== eventId);
 
-    // Удаляем pending / reserve заявку (approved оставляем — информация для admin)
+    // Удаляем все заявки студента на это мероприятие
     let apps = getApplications();
-    apps = apps.filter(a => !(
-        a.eventId === eventId &&
-        a.username === user.username &&
-        (a.status === 'pending' || a.status === 'reserve')
-    ));
+    apps = apps.filter(a => !(a.eventId === eventId && a.username === user.username));
     saveApplications(apps);
 
     setCurrentUser(user);
@@ -796,6 +804,9 @@ function openEditEventForm(eventId) {
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = !!event.hasCertificate;
 
+    const orgCb = document.getElementById('new-event-allow-organizer');
+    if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
+
     document.getElementById('event-form-modal').style.display = 'flex';
 }
 
@@ -807,8 +818,9 @@ function addEvent() {
     const type        = document.getElementById('new-event-type')?.value           || 'star';
     const desc        = document.getElementById('new-event-description')?.value.trim() || '';
     const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
-    const needsForm       = document.getElementById('new-event-requires-form')?.checked || false;
-    const hasCertificate  = document.getElementById('new-event-has-certificate')?.checked || false;
+    const needsForm          = document.getElementById('new-event-requires-form')?.checked   || false;
+    const hasCertificate     = document.getElementById('new-event-has-certificate')?.checked  || false;
+    const allowOrganizerRole = document.getElementById('new-event-allow-organizer')?.checked  || false;
 
     if (!title) { showNotification('Введите название мероприятия', 'error'); return; }
     if (!date)  { showNotification('Введите дату мероприятия', 'error'); return; }
@@ -838,14 +850,15 @@ function addEvent() {
                 date,
                 time,
                 type,
-                description:     desc,
-                maxParticipants: max,
-                reserveCount:    events[idx].reserveCount || 0,
-                requiresForm:    needsForm,
+                description:      desc,
+                maxParticipants:  max,
+                reserveCount:     events[idx].reserveCount || 0,
+                requiresForm:     needsForm,
                 formFields,
                 status,
                 hasCertificate,
-                attachments:     adminEventAttachments.map(f => ({ ...f })),
+                allowOrganizerRole,
+                attachments:      adminEventAttachments.map(f => ({ ...f })),
             };
         }
         showNotification('Мероприятие обновлено', 'success');
@@ -864,6 +877,7 @@ function addEvent() {
             formFields,
             status:          'open',
             hasCertificate,
+            allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
@@ -917,6 +931,9 @@ function resetEventForm() {
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = false;
+
+    const orgCb = document.getElementById('new-event-allow-organizer');
+    if (orgCb) orgCb.checked = false;
 }
 
 /* ================================================================
@@ -1086,8 +1103,9 @@ function showEventDescription(eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
-    const count = getParticipantsCount(eventId);
-    const max   = event.maxParticipants || 0;
+    const count   = getParticipantsCount(eventId);
+    const pending = getPendingCount(eventId);
+    const max     = event.maxParticipants || 0;
 
     const fieldsInfo = event.requiresForm && event.formFields?.length > 0
         ? `<hr style="border:none;border-top:2px solid #e5e7eb;margin-bottom:18px;">
@@ -1126,11 +1144,16 @@ function showEventDescription(eventId) {
                 <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.time)}</p>
             </div>
             <div>
-                <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Участники</p>
+                <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Одобрено</p>
                 <p style="font-size:18px;color:#163a6f;font-weight:600;">
-                    ${max > 0 ? count + ' / ' + max : 'Без ограничений'}
+                    ${max > 0 ? count + ' / ' + max : count + ' (без ограничений)'}
                 </p>
             </div>
+            ${pending > 0 ? `
+            <div>
+                <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Ожидают</p>
+                <p style="font-size:18px;color:#d97706;font-weight:600;">${pending}</p>
+            </div>` : ''}
             ${(event.reserveCount || 0) > 0 ? `
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Резерв</p>

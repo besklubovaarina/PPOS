@@ -162,12 +162,14 @@ function updateUIForAuth() {
     const navAdminBtn    = document.getElementById('nav-admin-btn');
     const navMyEventsBtn = document.getElementById('nav-my-events-btn');
 
+    const navGroupsBtn   = document.getElementById('nav-groups-btn');
     if (navAdminBtn)     navAdminBtn.style.display    = admin                  ? 'inline-block' : 'none';
+    if (navGroupsBtn)    navGroupsBtn.style.display   = admin                  ? 'inline-block' : 'none';
     if (navMyEventsBtn)  navMyEventsBtn.style.display = (loggedIn && !admin)   ? 'inline-block' : 'none';
 
-    // Раздел групп института — только для администратора
+    // Раздел групп института — для всех авторизованных
     const instituteSection = document.getElementById('instituteGroups');
-    if (instituteSection) instituteSection.style.display = admin ? '' : 'none';
+    if (instituteSection) instituteSection.style.display = loggedIn ? '' : 'none';
 
 
     const myEventsSection = document.getElementById('myEvents');

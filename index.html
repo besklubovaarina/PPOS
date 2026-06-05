@@ -97,6 +97,10 @@
                     onclick="scrollToSection('myEvents')">
                 Мои мероприятия
             </button>
+            <button class="nav-btn" id="nav-groups-btn" style="display:none;"
+                    onclick="scrollToSection('instituteGroups')">
+                Группы АлтГПУ
+            </button>
             <button class="nav-btn" id="nav-admin-btn" style="display:none;"
                     onclick="scrollToSection('adminPanel')">
                 Панель управления
@@ -178,7 +182,7 @@
          ============================================================ -->
     <section id="instituteGroups" class="section">
         <div class="section-header">
-            <h2 class="section-title">ИИТиФМО</h2>
+            <h2 class="section-title">Группы АлтГПУ</h2>
             <button class="edit-btn edit-btn-admin"
                     id="institute-edit-btn"
                     style="display:none;"
@@ -625,6 +629,14 @@
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                 <input type="checkbox" id="new-event-has-certificate" style="width:18px;height:18px;cursor:pointer;accent-color:#064591;">
                 <span class="form-label" style="margin-bottom:0;">Выдавать сертификаты участникам</span>
+            </label>
+        </div>
+
+        <!-- Роли при регистрации -->
+        <div style="margin-top:14px;">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                <input type="checkbox" id="new-event-allow-organizer" style="width:18px;height:18px;cursor:pointer;accent-color:#064591;">
+                <span class="form-label" style="margin-bottom:0;">Разрешить регистрацию в роли организатора</span>
             </label>
         </div>
 
