@@ -154,6 +154,9 @@ function getEventStatusBadge(event) {
     const max   = event.maxParticipants || 0;
     const admin = isAdmin();
 
+    if (event.status === 'completed') {
+        return `<span class="event-status-badge closed">Завершено</span>`;
+    }
     if (event.status === 'closed') {
         return `<span class="event-status-badge closed">Запись закрыта</span>`;
     }
@@ -1143,6 +1146,7 @@ function showEventDescription(eventId) {
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Время</p>
                 <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.time)}</p>
             </div>
+            ${isAdmin() ? `
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Одобрено</p>
                 <p style="font-size:18px;color:#163a6f;font-weight:600;">
@@ -1153,7 +1157,7 @@ function showEventDescription(eventId) {
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Ожидают</p>
                 <p style="font-size:18px;color:#d97706;font-weight:600;">${pending}</p>
-            </div>` : ''}
+            </div>` : ''}` : ''}
             ${(event.reserveCount || 0) > 0 ? `
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Резерв</p>
