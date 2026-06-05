@@ -1,0 +1,207 @@
+Данные_входа {
+	id integer pk increments unique
+	Логин varchar
+	Пароль varchar
+}
+
+Институт {
+	id integer pk increments unique
+	Название varchar
+}
+
+Направление_обучения {
+	id integer pk increments unique
+	Название varchar
+}
+
+Форма_обучения {
+	id integer pk increments unique
+	Название varchar
+}
+
+Год_поступления {
+	id integer pk increments unique
+	Год integer
+}
+
+Группа {
+	id integer pk increments unique
+	Номер varchar
+	id_Год_Поступления(FK) integer *> Год_поступления.id
+	id_Институт(FK) integer *> Институт.id
+	id_Направление_обучения(FK) integer *> Направление_обучения.id
+	id_Форма_обучения(FK) integer *> Форма_обучения.id
+}
+
+Регион {
+	id integer pk increments unique
+	Название varchar
+}
+
+Населенный_пункт {
+	id integer pk increments unique
+	Название varchar
+	id_Регион(FK) integer *> Регион.id
+}
+
+Улица {
+	id integer pk increments unique
+	Название varchar
+	id_Населенный_пункт(FK) integer *> Населенный_пункт.id
+}
+
+Заявление_в_бухгалтерию {
+	id integer pk increments unique
+	Номер_протокола integer null
+	Протокол_от date null
+	Дата_написания date
+	Файл text null
+}
+
+Заявление_на_вступление {
+	id integer pk increments unique
+	Дата date
+	Файл text null
+	id_Студент(FK) integer > Студент.id
+}
+
+Должность {
+	id integer pk increments unique
+	Название varchar
+}
+
+Студент {
+	id integer pk increments unique
+	ФИО varchar
+	Пол varchar null
+	Телефон varchar null
+	Дата_рождения date null
+	Email varchar null
+	Спецификация_адреса varchar null
+	Аватар text null
+	Роль varchar
+	is_admin boolean
+	id_Группа(FK) integer null *> Группа.id
+	id_Данные_входа(FK) integer > Данные_входа.id
+	id_Улица(FK) integer null *> Улица.id
+	id_Заявление_в_бухгалтерию(FK) integer null > Заявление_в_бухгалтерию.id
+	id_Заявление_на_вступление(FK) integer null > Заявление_на_вступление.id
+	id_Согласие_на_обработку_перс_данных_на_мероприятие(FK) integer null > Согласие_на_обработку_перс_данных_на_мероприятие.id
+}
+
+Список_должностей {
+	id integer pk increments unique
+	Количество integer
+	id_Должность(FK) integer *> Должность.id
+	id_Студент(FK) integer *> Студент.id
+}
+
+Мероприятие {
+	id integer pk increments unique
+	Название varchar
+	Описание text null
+	Дата date null
+	Время time null
+	Тип varchar null
+	Место varchar null
+	Макс_участников integer
+	Статус varchar
+	Есть_сертификат boolean
+	Разрешить_организатора boolean
+	Изображение text null
+	Шаблон_сертификата_участника text null
+	Шаблон_сертификата_организатора text null
+	Дата_создания timestamp
+}
+
+Согласие_на_обработку_перс_данных_на_мероприятие {
+	id integer pk increments unique
+	Номер integer null
+	Дата date
+	Роль_участника varchar
+	Статус varchar
+	Напоминание boolean
+	id_Мероприятие(FK) integer *> Мероприятие.id
+	id_Студент(FK) integer *> Студент.id
+}
+
+Корпус {
+	id integer pk increments unique
+	Название varchar
+	Адрес varchar null
+}
+
+Аудитория {
+	id integer pk increments unique
+	Название varchar
+	id_Корпус(FK) integer *> Корпус.id
+}
+
+Протокол_собрания {
+	id integer pk increments unique
+	Наименование_организации varchar null
+	Номер_протокола integer
+	Дата date null
+	Повестка_собрания text null
+	Число_присутствующих integer null
+	Результаты_голосования text null
+	Файл_название varchar null
+	Файл text null
+	Дата_загрузки timestamp
+	id_Аудитория(FK) integer null *> Аудитория.id
+}
+
+Вопросы {
+	id integer pk increments unique
+	Формулировка text
+	Решение text null
+	Проголосовало_ЗА integer
+	Проголосовало_ПРОТИВ integer
+	Воздержались integer
+	Утверждение_на_должность boolean
+	id_Протокол_собрания(FK) integer *> Протокол_собрания.id
+	id_Студент(FK) integer null *> Студент.id
+	id_Должность(FK) integer null *> Должность.id
+}
+
+Уведомления {
+	id integer pk increments unique
+	Тип varchar
+	Сообщение text
+	Мероприятие varchar null
+	Прочитано boolean
+	Дата timestamp
+	id_Студент(FK) integer *> Студент.id
+}
+
+Документы_для_скачивания {
+	id varchar pk unique
+	Название varchar
+	Файл text
+	Дата_добавления timestamp
+}
+
+Ожидающие_изменения_профиля {
+	id varchar pk unique
+	Тип varchar
+	Старое_ФИО varchar null
+	Новое_ФИО varchar null
+	Старая_группа varchar null
+	Новая_группа varchar null
+	Старый_телефон varchar null
+	Новый_телефон varchar null
+	Старый_email varchar null
+	Новый_email varchar null
+	Старый_аватар text null
+	Новый_аватар text null
+	Статус varchar
+	Дата_создания timestamp
+	id_Студент(FK) integer *> Студент.id
+}
+
+Участники_группы {
+	id integer pk increments unique
+	Имя varchar
+	id_Группа(FK) integer *> Группа.id
+	id_Студент(FK) integer null *> Студент.id
+}
