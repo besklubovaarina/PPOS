@@ -1327,7 +1327,7 @@ function printCertificate() {
     const area = document.getElementById('cert-print-area');
     if (!area) return;
 
-    const printWin = window.open('', '_blank', 'width=900,height=700');
+    const printWin = window.open('', '_blank', 'width=600,height=900');
     printWin.document.write(`
         <!DOCTYPE html>
         <html>
@@ -1335,14 +1335,17 @@ function printCertificate() {
             <meta charset="UTF-8">
             <title>Сертификат</title>
             <style>
-                @media print { button { display: none !important; } }
+                @media print {
+                    button { display: none !important; }
+                    @page { size: A5 portrait; margin: 10mm; }
+                }
                 body { margin:0; padding:20px; display:flex; justify-content:center;
-                       align-items:center; min-height:100vh; font-family:Arial,sans-serif;
+                       align-items:flex-start; min-height:100vh; font-family:Arial,sans-serif;
                        background:#fff; }
                 .certificate-container {
                     position:relative; display:block;
-                    max-width:800px; width:100%;
-                    aspect-ratio:1.414/1;
+                    max-width:460px; width:100%;
+                    aspect-ratio:1/1.414;
                     overflow:hidden;
                     border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.18);
                     -webkit-print-color-adjust:exact; print-color-adjust:exact;
