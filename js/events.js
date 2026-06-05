@@ -810,14 +810,14 @@ function openEditEventForm(eventId) {
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
 
-    // Сбрасываем старые данные и загружаем превью существующих шаблонов
+    // Сбрасываем и загружаем превью из отдельных ключей
     _certImgData = { participant: null, organizer: null };
     ['participant', 'organizer'].forEach(role => {
-        const imgKey = role === 'participant' ? 'certificateParticipantImg' : 'certificateOrganizerImg';
+        const stored = getCertTemplate(event.id, role);
         const prev   = document.getElementById('cert-' + role + '-preview');
         const nameEl = document.getElementById('cert-' + role + '-name');
-        if (event[imgKey]) {
-            if (prev)   { prev.src = event[imgKey]; prev.style.display = 'inline-block'; }
+        if (stored) {
+            if (prev)   { prev.src = stored; prev.style.display = 'inline-block'; }
             if (nameEl) nameEl.textContent = 'Загружен';
         } else {
             if (prev)   { prev.src = ''; prev.style.display = 'none'; }
@@ -852,18 +852,19 @@ function handleCertFileSelect(input, role) {
 
     const reader = new FileReader();
     reader.onload = e => {
-        // Сжимаем через canvas до max 1200px и JPEG 0.82, чтобы уложиться в localStorage
+        // Масштабируем до max 2000px при сохранении исходного качества PNG
         const img = new Image();
         img.onload = () => {
-            const MAX = 1200;
+            const MAX = 2000;
             const scale = img.width > MAX ? MAX / img.width : 1;
             const canvas = document.createElement('canvas');
             canvas.width  = Math.round(img.width  * scale);
             canvas.height = Math.round(img.height * scale);
             canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            const compressed = canvas.toDataURL('image/jpeg', 0.82);
-            _certImgData[role] = compressed;
-            if (previewEl) { previewEl.src = compressed; previewEl.style.display = 'inline-block'; }
+            // PNG для точного воспроизведения — без потерь
+            const dataUrl = canvas.toDataURL('image/png');
+            _certImgData[role] = dataUrl;
+            if (previewEl) { previewEl.src = dataUrl; previewEl.style.display = 'inline-block'; }
         };
         img.src = e.target.result;
     };
@@ -904,13 +905,12 @@ function addEvent() {
         const status = document.getElementById('new-event-status')?.value || 'open';
         const idx = events.findIndex(e => e.id === currentEditEventId);
         if (idx !== -1) {
-            // Сохраняем cert-изображения: новая загрузка перекрывает существующую
-            const certPartImg = _certImgData.participant
-                || (hasCertificate ? events[idx].certificateParticipantImg : null)
-                || null;
-            const certOrgImg  = _certImgData.organizer
-                || (hasCertificate && allowOrganizerRole ? events[idx].certificateOrganizerImg : null)
-                || null;
+            const evId = events[idx].id;
+            // Сохраняем шаблоны в отдельные ключи localStorage
+            if (_certImgData.participant) saveCertTemplate(evId, 'participant', _certImgData.participant);
+            if (_certImgData.organizer)   saveCertTemplate(evId, 'organizer',   _certImgData.organizer);
+            // Если сертификаты отключены — удаляем шаблоны
+            if (!hasCertificate) deleteCertTemplates(evId);
 
             events[idx] = {
                 ...events[idx],
@@ -918,39 +918,41 @@ function addEvent() {
                 date,
                 time,
                 type,
-                description:              desc,
-                maxParticipants:          max,
-                reserveCount:             events[idx].reserveCount || 0,
-                requiresForm:             needsForm,
+                description:     desc,
+                maxParticipants: max,
+                reserveCount:    events[idx].reserveCount || 0,
+                requiresForm:    needsForm,
                 formFields,
                 status,
                 hasCertificate,
                 allowOrganizerRole,
-                certificateParticipantImg: certPartImg,
-                certificateOrganizerImg:   certOrgImg,
-                attachments:              adminEventAttachments.map(f => ({ ...f })),
+                attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
+            // Убираем устаревшие inline-поля если они были
+            delete events[idx].certificateParticipantImg;
+            delete events[idx].certificateOrganizerImg;
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
         // Режим добавления
+        const newId = Date.now().toString();
+        if (_certImgData.participant) saveCertTemplate(newId, 'participant', _certImgData.participant);
+        if (_certImgData.organizer)   saveCertTemplate(newId, 'organizer',   _certImgData.organizer);
         events.push({
-            id:                        Date.now().toString(),
+            id:              newId,
             title,
             date,
             time,
             type,
-            description:               desc,
-            maxParticipants:           max,
-            reserveCount:              0,
-            requiresForm:              needsForm,
+            description:     desc,
+            maxParticipants: max,
+            reserveCount:    0,
+            requiresForm:    needsForm,
             formFields,
-            status:                    'open',
+            status:          'open',
             hasCertificate,
             allowOrganizerRole,
-            certificateParticipantImg: _certImgData.participant || null,
-            certificateOrganizerImg:   _certImgData.organizer   || null,
-            attachments:               adminEventAttachments.map(f => ({ ...f })),
+            attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
     }
@@ -1287,8 +1289,8 @@ function showCertificate(eventId) {
 
     const isOrganizer = myApp.applicationRole === 'organizer';
     const certImage   = isOrganizer
-        ? (event.certificateOrganizerImg || event.certificateParticipantImg || null)
-        : (event.certificateParticipantImg || null);
+        ? (getCertTemplate(event.id, 'organizer') || getCertTemplate(event.id, 'participant'))
+        : getCertTemplate(event.id, 'participant');
 
     if (!certImage) {
         showNotification('Шаблон сертификата ещё не загружен администратором', 'warning');
