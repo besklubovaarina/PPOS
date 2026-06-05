@@ -124,7 +124,7 @@ function _showPendingNotifications(username) {
     markNotificationsRead(username);
     unread.forEach((n, idx) => {
         setTimeout(() => {
-            const type = n.type === 'approval' ? 'success' : 'error';
+            const type = n.type === 'одобрение' ? 'success' : 'error';
             showNotification(n.message, type);
         }, 1200 + idx * 1000);
     });

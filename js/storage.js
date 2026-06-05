@@ -145,7 +145,7 @@ function saveUserNotifications(username, notifications) {
 /**
  * Добавляет новое уведомление пользователю.
  * @param {string} username
- * @param {{ type: 'approval'|'rejection'|'reserve', message: string, eventTitle: string }} notification
+ * @param {{ type: 'одобрение'|'отклонение'|'резерв', message: string, eventTitle: string }} notification
  */
 function addUserNotification(username, notification) {
     const notifs = getUserNotifications(username);

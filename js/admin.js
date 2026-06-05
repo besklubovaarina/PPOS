@@ -583,7 +583,7 @@ function approveApplication(appId) {
 
     // Уведомление участнику
     addUserNotification(app.username, {
-        type:       'approval',
+        type:       'одобрение',
         message:    `Ваша заявка на мероприятие «${event?.title || 'Мероприятие'}» одобрена!`,
         eventTitle: event?.title || '',
     });
@@ -628,7 +628,7 @@ function rejectApplication(appId) {
 
     // Уведомление участнику об отказе
     addUserNotification(app.username, {
-        type:       'rejection',
+        type:       'отклонение',
         message:    `К сожалению, ваша заявка на «${event?.title || 'Мероприятие'}» не прошла отбор.`,
         eventTitle: event?.title || '',
     });
