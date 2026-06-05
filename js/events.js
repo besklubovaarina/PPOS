@@ -1251,7 +1251,8 @@ function printCertificate() {
                 .certificate-container {
                     position:relative; display:block;
                     max-width:800px; width:100%;
-                    aspect-ratio:1.414/1; min-height:400px;
+                    aspect-ratio:1.414/1;
+                    overflow:hidden;
                     border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.18);
                     -webkit-print-color-adjust:exact; print-color-adjust:exact;
                 }
