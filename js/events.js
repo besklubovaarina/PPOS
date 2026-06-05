@@ -1167,6 +1167,8 @@ function showEventDescription(eventId) {
         ${fieldsInfo}
         ${attachHtml}`;
 
+    const titleEl = document.getElementById('description-modal-title');
+    if (titleEl) titleEl.textContent = 'О мероприятии';
     document.getElementById('description-modal').style.display = 'flex';
 }
 
