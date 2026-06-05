@@ -183,19 +183,58 @@ function isChairman() {
 }
 
 /* ---------- Скачиваемые документы (управляет администратор) ---------- */
+/* Хранит только метаданные [{id, name}] — сами файлы в DocsDB (IndexedDB) */
 function getDownloadableDocs() {
     const raw = localStorage.getItem(KEYS.DOWNLOADABLE_DOCS);
     return raw ? JSON.parse(raw) : [];
 }
 
 function saveDownloadableDocs(docs) {
-    try {
-        localStorage.setItem(KEYS.DOWNLOADABLE_DOCS, JSON.stringify(docs));
-    } catch (e) {
-        if (e.name === 'QuotaExceededError' || e.code === 22) {
-            showNotification('Ошибка: файл слишком большой для сохранения.', 'error');
-        } else {
-            throw e;
-        }
-    }
+    localStorage.setItem(KEYS.DOWNLOADABLE_DOCS, JSON.stringify(docs));
 }
+
+/* ---------- IndexedDB для файлов документов ---------- */
+/* Позволяет хранить файлы до сотен МБ, в отличие от localStorage (5 МБ) */
+const DocsDB = (() => {
+    const DB_NAME = 'ppos_docs_db';
+    const STORE   = 'docs';
+    let _db = null;
+
+    function open() {
+        if (_db) return Promise.resolve(_db);
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = e => {
+                e.target.result.createObjectStore(STORE, { keyPath: 'id' });
+            };
+            req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+            req.onerror   = () => reject(req.error);
+        });
+    }
+
+    return {
+        get(id) {
+            return open().then(db => new Promise((resolve, reject) => {
+                const req = db.transaction(STORE).objectStore(STORE).get(id);
+                req.onsuccess = () => resolve(req.result ? req.result.data : null);
+                req.onerror   = () => reject(req.error);
+            }));
+        },
+        set(id, data) {
+            return open().then(db => new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).put({ id, data });
+                tx.oncomplete = resolve;
+                tx.onerror    = () => reject(tx.error);
+            }));
+        },
+        remove(id) {
+            return open().then(db => new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).delete(id);
+                tx.oncomplete = resolve;
+                tx.onerror    = () => reject(tx.error);
+            }));
+        },
+    };
+})();
