@@ -852,17 +852,22 @@ function handleCertFileSelect(input, role) {
 
     const reader = new FileReader();
     reader.onload = e => {
-        // Масштабируем до max 2000px при сохранении исходного качества PNG
         const img = new Image();
         img.onload = () => {
-            const MAX = 2000;
+            // Ограничиваем ширину 1600px и сохраняем как JPEG 0.93.
+            // canvas.toDataURL('image/png') у браузеров хуже сжимает и даёт файлы
+            // в 5-10 раз крупнее оригинала — это быстро заполняет localStorage.
+            // JPEG 0.93 визуально неотличим от PNG для сертификата и в 5-10 раз компактнее.
+            const MAX = 1600;
             const scale = img.width > MAX ? MAX / img.width : 1;
             const canvas = document.createElement('canvas');
             canvas.width  = Math.round(img.width  * scale);
             canvas.height = Math.round(img.height * scale);
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            // PNG для точного воспроизведения — без потерь
-            const dataUrl = canvas.toDataURL('image/png');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.93);
             _certImgData[role] = dataUrl;
             if (previewEl) { previewEl.src = dataUrl; previewEl.style.display = 'inline-block'; }
         };
