@@ -810,7 +810,51 @@ function openEditEventForm(eventId) {
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
 
+    // Сбрасываем старые данные и загружаем превью существующих шаблонов
+    _certImgData = { participant: null, organizer: null };
+    ['participant', 'organizer'].forEach(role => {
+        const imgKey = role === 'participant' ? 'certificateParticipantImg' : 'certificateOrganizerImg';
+        const prev   = document.getElementById('cert-' + role + '-preview');
+        const nameEl = document.getElementById('cert-' + role + '-name');
+        if (event[imgKey]) {
+            if (prev)   { prev.src = event[imgKey]; prev.style.display = 'inline-block'; }
+            if (nameEl) nameEl.textContent = 'Загружен';
+        } else {
+            if (prev)   { prev.src = ''; prev.style.display = 'none'; }
+            if (nameEl) nameEl.textContent = '';
+        }
+    });
+    updateCertUploadVisibility();
+
     document.getElementById('event-form-modal').style.display = 'flex';
+}
+
+/* ================================================================
+   ЗАГРУЗКА ШАБЛОНОВ СЕРТИФИКАТОВ
+   ================================================================ */
+let _certImgData = { participant: null, organizer: null };
+
+function updateCertUploadVisibility() {
+    const hasCert  = document.getElementById('new-event-has-certificate')?.checked;
+    const allowOrg = document.getElementById('new-event-allow-organizer')?.checked;
+    const section  = document.getElementById('cert-upload-section');
+    const orgBlock = document.getElementById('cert-organizer-upload');
+    if (section)  section.style.display  = hasCert ? 'block' : 'none';
+    if (orgBlock) orgBlock.style.display = (hasCert && allowOrg) ? 'block' : 'none';
+}
+
+function handleCertFileSelect(input, role) {
+    const file = input.files[0];
+    if (!file) return;
+    const nameEl    = document.getElementById('cert-' + role + '-name');
+    const previewEl = document.getElementById('cert-' + role + '-preview');
+    if (nameEl) nameEl.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = e => {
+        _certImgData[role] = e.target.result;
+        if (previewEl) { previewEl.src = e.target.result; previewEl.style.display = 'inline-block'; }
+    };
+    reader.readAsDataURL(file);
 }
 
 /** Сохраняет новое или изменённое мероприятие. */
@@ -847,41 +891,53 @@ function addEvent() {
         const status = document.getElementById('new-event-status')?.value || 'open';
         const idx = events.findIndex(e => e.id === currentEditEventId);
         if (idx !== -1) {
+            // Сохраняем cert-изображения: новая загрузка перекрывает существующую
+            const certPartImg = _certImgData.participant
+                || (hasCertificate ? events[idx].certificateParticipantImg : null)
+                || null;
+            const certOrgImg  = _certImgData.organizer
+                || (hasCertificate && allowOrganizerRole ? events[idx].certificateOrganizerImg : null)
+                || null;
+
             events[idx] = {
                 ...events[idx],
                 title,
                 date,
                 time,
                 type,
-                description:      desc,
-                maxParticipants:  max,
-                reserveCount:     events[idx].reserveCount || 0,
-                requiresForm:     needsForm,
+                description:              desc,
+                maxParticipants:          max,
+                reserveCount:             events[idx].reserveCount || 0,
+                requiresForm:             needsForm,
                 formFields,
                 status,
                 hasCertificate,
                 allowOrganizerRole,
-                attachments:      adminEventAttachments.map(f => ({ ...f })),
+                certificateParticipantImg: certPartImg,
+                certificateOrganizerImg:   certOrgImg,
+                attachments:              adminEventAttachments.map(f => ({ ...f })),
             };
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
         // Режим добавления
         events.push({
-            id:              Date.now().toString(),
+            id:                        Date.now().toString(),
             title,
             date,
             time,
             type,
-            description:     desc,
-            maxParticipants: max,
-            reserveCount:    0,
-            requiresForm:    needsForm,
+            description:               desc,
+            maxParticipants:           max,
+            reserveCount:              0,
+            requiresForm:              needsForm,
             formFields,
-            status:          'open',
+            status:                    'open',
             hasCertificate,
             allowOrganizerRole,
-            attachments:     adminEventAttachments.map(f => ({ ...f })),
+            certificateParticipantImg: _certImgData.participant || null,
+            certificateOrganizerImg:   _certImgData.organizer   || null,
+            attachments:               adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
     }
@@ -937,6 +993,19 @@ function resetEventForm() {
 
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = false;
+
+    // Сброс загрузки сертификатов
+    _certImgData = { participant: null, organizer: null };
+    ['participant', 'organizer'].forEach(role => {
+        const fileEl = document.getElementById('cert-' + role + '-file');
+        const prevEl = document.getElementById('cert-' + role + '-preview');
+        const nmEl   = document.getElementById('cert-' + role + '-name');
+        if (fileEl) fileEl.value = '';
+        if (prevEl) { prevEl.src = ''; prevEl.style.display = 'none'; }
+        if (nmEl)   nmEl.textContent = '';
+    });
+    const certSection = document.getElementById('cert-upload-section');
+    if (certSection) certSection.style.display = 'none';
 }
 
 /* ================================================================
@@ -1205,21 +1274,22 @@ function showCertificate(eventId) {
 
     const isOrganizer = myApp.applicationRole === 'organizer';
     const certImage   = isOrganizer
-        ? 'images/certificate-organizer.png'
-        : 'images/certificate-participant.png';
+        ? (event.certificateOrganizerImg || event.certificateParticipantImg || null)
+        : (event.certificateParticipantImg || null);
 
-    const nameTopPercent = isOrganizer ? '36' : '41';
-    const nameSize       = isOrganizer ? '24px' : '28px';
-    const dateTopPercent = isOrganizer ? '81' : '79';
+    if (!certImage) {
+        showNotification('Шаблон сертификата ещё не загружен администратором', 'warning');
+        return;
+    }
 
     const certHTML = `
         <div style="text-align:center;">
             <div class="certificate-container" id="cert-print-area"
-                 style="background:url('${certImage}') center/cover no-repeat,linear-gradient(135deg,#fdf6e3 0%,#f5e6c8 100%);">
-                <div class="cert-name-overlay" style="top:${nameTopPercent}%;font-size:${nameSize};">
+                 style="background:url('${certImage}') center/cover no-repeat;">
+                <div class="cert-name-overlay" style="top:41%;font-size:28px;">
                     ${escapeHTML(user.fullName)}
                 </div>
-                <div class="cert-date-overlay" style="top:${dateTopPercent}%;font-size:16px;">
+                <div class="cert-date-overlay" style="top:79%;font-size:16px;">
                     ${escapeHTML(event.date)}
                 </div>
             </div>
