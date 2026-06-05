@@ -1,28 +1,37 @@
+// events.js — мероприятия
+// GET  /api/events          — список всех мероприятий
+// POST /api/events          — создать (только admin)
+// PUT  /api/events/:id      — редактировать
+// DELETE /api/events/:id    — удалить
+
 const express = require('express');
-const router = express.Router();
-const pool = require('../db');
+const router  = express.Router();
+const pool    = require('../db');
 
 // Получить все мероприятия
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT * FROM "Мероприятие" ORDER BY "Дата"'
+            'SELECT * FROM events ORDER BY created_at DESC'
         );
+        res.json({ success: true, events: result.rows });
+    } catch (err) {
+        console.error(err);
+        res.json({ success: false, error: 'Ошибка сервера' });
+    }
+});
 
-        const events = result.rows.map(e => ({
-            id: e.id.toString(),
-            title: e["Название"],
-            description: e["Описание"],
-            date: new Date(e["Дата"]).toLocaleDateString('ru-RU'),
-            time: e["Время"].substring(0, 5),
-            type: e["Тип"],
-            maxParticipants: e["Макс_участников"],
-            status: e["Статус"]
-        }));
-
-        res.json({ success: true, events });
-    } catch (error) {
-        console.error('Ошибка:', error);
+// Получить одно мероприятие
+router.get('/:id', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM events WHERE id = $1', [req.params.id]
+        );
+        if (result.rows.length === 0)
+            return res.json({ success: false, error: 'Мероприятие не найдено' });
+        res.json({ success: true, event: result.rows[0] });
+    } catch (err) {
+        console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
@@ -30,58 +39,60 @@ router.get('/', async (req, res) => {
 // Создать мероприятие
 router.post('/', async (req, res) => {
     try {
-        const { title, date, time, type, description, maxParticipants } = req.body;
+        const {
+            title, description, date, time, type, location,
+            max_participants, status, has_certificate,
+            allow_organizer_role, image_url,
+            cert_participant_data, cert_organizer_data
+        } = req.body;
 
         const result = await pool.query(
-            `INSERT INTO "Мероприятие" ("Название", "Описание", "Дата", "Время", "Тип", "Макс_участников")
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [title, description, date, time, type, maxParticipants || 0]
+            `INSERT INTO events
+             (title, description, date, time, type, location,
+              max_participants, status, has_certificate,
+              allow_organizer_role, image_url,
+              cert_participant_data, cert_organizer_data)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+             RETURNING *`,
+            [title, description, date, time, type, location,
+             max_participants || 0, status || 'open',
+             has_certificate || false, allow_organizer_role || false,
+             image_url || null, cert_participant_data || null, cert_organizer_data || null]
         );
 
         res.json({ success: true, event: result.rows[0] });
-    } catch (error) {
-        console.error('Ошибка:', error);
+    } catch (err) {
+        console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
 
-// Записаться на мероприятие
-router.post('/:id/enroll', async (req, res) => {
+// Редактировать мероприятие
+router.put('/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { username, studentId } = req.body;
+        const {
+            title, description, date, time, type, location,
+            max_participants, status, has_certificate,
+            allow_organizer_role, image_url,
+            cert_participant_data, cert_organizer_data
+        } = req.body;
 
-        // Получаем пользователя
-        const userResult = await pool.query(
-            'SELECT id FROM "Пользователь" WHERE "Логин" = $1',
-            [username]
-        );
-
-        if (userResult.rows.length === 0) {
-            return res.json({ success: false, error: 'Пользователь не найден' });
-        }
-
-        const userId = userResult.rows[0].id;
-
-        // Получаем студента
-        const studentResult = await pool.query(
-            'SELECT id FROM "Студент" WHERE id_Пользователь = $1',
-            [userId]
-        );
-
-        const studentIdDb = studentResult.rows[0]?.id;
-
-        // Создаём согласие
         await pool.query(
-            `INSERT INTO "Согласие_на_мероприятие" 
-             ("Номер", "Дата", "Статус", id_Мероприятие, id_Студент)
-             VALUES ($1, CURRENT_DATE, 'pending', $2, $3)`,
-            [Math.floor(Math.random() * 1000), id, studentIdDb]
+            `UPDATE events SET
+             title=$1, description=$2, date=$3, time=$4, type=$5,
+             location=$6, max_participants=$7, status=$8,
+             has_certificate=$9, allow_organizer_role=$10,
+             image_url=$11, cert_participant_data=$12, cert_organizer_data=$13
+             WHERE id=$14`,
+            [title, description, date, time, type, location,
+             max_participants, status, has_certificate,
+             allow_organizer_role, image_url,
+             cert_participant_data, cert_organizer_data, req.params.id]
         );
 
-        res.json({ success: true, message: 'Запись оформлена' });
-    } catch (error) {
-        console.error('Ошибка:', error);
+        res.json({ success: true, message: 'Мероприятие обновлено' });
+    } catch (err) {
+        console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
@@ -89,10 +100,10 @@ router.post('/:id/enroll', async (req, res) => {
 // Удалить мероприятие
 router.delete('/:id', async (req, res) => {
     try {
-        await pool.query('DELETE FROM "Мероприятие" WHERE id = $1', [req.params.id]);
+        await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
         res.json({ success: true, message: 'Мероприятие удалено' });
-    } catch (error) {
-        console.error('Ошибка:', error);
+    } catch (err) {
+        console.error(err);
         res.json({ success: false, error: 'Ошибка сервера' });
     }
 });
