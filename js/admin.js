@@ -441,6 +441,7 @@ function renderEventApplicants(container, eventId) {
                     <th>Телефон</th>
                     <th>Дата подачи</th>
                     <th>Статус</th>
+                    ${event.allowOrganizerRole ? '<th>Роль</th>' : ''}
                     ${thTextFields}
                     ${hasFiles ? '<th>Файлы</th>' : ''}
                     <th>Действия</th>
@@ -516,6 +517,7 @@ function renderEventApplicants(container, eventId) {
                 <td>${escapeHTML(u.phone || '—')}</td>
                 <td>${escapeHTML(app.date || '—')}</td>
                 <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
+                ${event.allowOrganizerRole ? `<td>${app.applicationRole === 'organizer' ? '<span class="status-badge badge-reserve">Организатор</span>' : '<span class="status-badge badge-approved">Участник</span>'}</td>` : ''}
                 ${tdTextFields}
                 ${tdFiles}
                 <td>
