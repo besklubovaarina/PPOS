@@ -4,14 +4,15 @@
  */
 
 const KEYS = {
-    USERS:           'ppos_users',
-    EVENTS:          'ppos_events',
-    GROUP_MEMBERS:   'ppos_group_members',
-    INST_GROUPS:     'ppos_institute_groups',
-    APPLICATIONS:    'ppos_applications',
-    PENDING_CHANGES: 'ppos_pending_changes',
-    CURRENT_USER:    'ppos_current_user',
-    NOTIFICATIONS:   'ppos_notifications',
+    USERS:             'ppos_users',
+    EVENTS:            'ppos_events',
+    GROUP_MEMBERS:     'ppos_group_members',
+    INST_GROUPS:       'ppos_institute_groups',
+    APPLICATIONS:      'ppos_applications',
+    PENDING_CHANGES:   'ppos_pending_changes',
+    CURRENT_USER:      'ppos_current_user',
+    NOTIFICATIONS:     'ppos_notifications',
+    DOWNLOADABLE_DOCS: 'ppos_downloadable_docs',
 };
 
 /* ---------- Пользователи ---------- */
@@ -179,4 +180,22 @@ function isAdmin() {
 function isChairman() {
     const user = getCurrentUser();
     return user && (user.role === 'Председатель' || user.isAdmin === true);
+}
+
+/* ---------- Скачиваемые документы (управляет администратор) ---------- */
+function getDownloadableDocs() {
+    const raw = localStorage.getItem(KEYS.DOWNLOADABLE_DOCS);
+    return raw ? JSON.parse(raw) : [];
+}
+
+function saveDownloadableDocs(docs) {
+    try {
+        localStorage.setItem(KEYS.DOWNLOADABLE_DOCS, JSON.stringify(docs));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            showNotification('Ошибка: файл слишком большой для сохранения.', 'error');
+        } else {
+            throw e;
+        }
+    }
 }

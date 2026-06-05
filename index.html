@@ -330,7 +330,7 @@
      onclick="if(event.target===this) closeCertificateModal()">
     <div class="modal-content wide cert-modal">
         <div class="modal-header">
-            <h3>🏆 Сертификат участника</h3>
+            <h3 id="certificate-modal-title">🏆 Сертификат участника</h3>
             <button class="modal-close" onclick="closeCertificateModal()" title="Закрыть">✕</button>
         </div>
         <div class="modal-body" id="certificate-content"></div>
@@ -448,67 +448,7 @@
 
         <!-- ---- Вкладка: ДОКУМЕНТЫ ---- -->
         <div id="profile-pane-documents" style="display:none;">
-            <p style="color:#163a6f;font-size:16px;margin-bottom:20px;line-height:1.6;">
-                Для участия в мероприятиях ППОС необходимо предоставить следующие документы.
-                Загрузите скан или фотографию каждого документа.
-            </p>
-            <div class="documents-section" style="padding:0;background:transparent;">
-
-                <!-- Согласие на обработку данных -->
-                <div class="doc-card">
-                    <span class="doc-icon">📋</span>
-                    <div class="doc-info">
-                        <strong>Согласие на обработку персональных данных</strong>
-                        <p>Требуется для каждого мероприятия согласно ФЗ №152</p>
-                        <p class="doc-status" id="doc-status-consent">Не загружен</p>
-                    </div>
-                    <div class="file-input-wrapper" style="margin:0;">
-                        <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">
-                            Загрузить
-                        </span>
-                        <input type="file"
-                               accept="image/*,.pdf"
-                               onchange="uploadDocument('consent', event)">
-                    </div>
-                </div>
-
-                <!-- Заявление в бухгалтерию -->
-                <div class="doc-card">
-                    <span class="doc-icon">📝</span>
-                    <div class="doc-info">
-                        <strong>Заявление в бухгалтерию</strong>
-                        <p>Для оформления выплат и компенсаций</p>
-                        <p class="doc-status" id="doc-status-accounting">Не загружен</p>
-                    </div>
-                    <div class="file-input-wrapper" style="margin:0;">
-                        <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">
-                            Загрузить
-                        </span>
-                        <input type="file"
-                               accept="image/*,.pdf"
-                               onchange="uploadDocument('accounting', event)">
-                    </div>
-                </div>
-
-                <!-- Заявление на вступление -->
-                <div class="doc-card">
-                    <span class="doc-icon">✍️</span>
-                    <div class="doc-info">
-                        <strong>Заявление на вступление в профсоюз</strong>
-                        <p>Подаётся при вступлении в ППОС</p>
-                        <p class="doc-status" id="doc-status-join">Не загружен</p>
-                    </div>
-                    <div class="file-input-wrapper" style="margin:0;">
-                        <span class="file-input-btn" style="padding:8px 16px;font-size:14px;">
-                            Загрузить
-                        </span>
-                        <input type="file"
-                               accept="image/*,.pdf"
-                               onchange="uploadDocument('join', event)">
-                    </div>
-                </div>
-
-            </div>
+            <div id="docs-pane-content"></div>
         </div>
 
     </div><!-- /modal-content -->

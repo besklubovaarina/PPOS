@@ -3,7 +3,8 @@
  */
 
 let currentAdminTab          = 'changes';
-let currentApplicantsEventId = null; // если задан — показываем участников конкретного мероприятия
+let currentApplicantsEventId = null;
+let currentRoleFilter        = 'all'; // 'all' | 'participant' | 'organizer'
 
 /* ================================================================
    РЕНДЕР ВСЕЙ ПАНЕЛИ
@@ -29,9 +30,14 @@ function renderAdminPanel(tab) {
 }
 
 function switchAdminTab(tab) {
-    // При переключении вкладки сбрасываем просмотр мероприятия
     currentApplicantsEventId = null;
+    currentRoleFilter        = 'all';
     renderAdminPanel(tab);
+}
+
+function filterApplicantsByRole(role) {
+    currentRoleFilter = role;
+    renderAdminPanel(currentAdminTab);
 }
 
 /* ================================================================
@@ -349,7 +355,7 @@ function renderApplicationsOverview(container) {
 
                     <div class="event-app-actions-row">
                         <button class="btn-approve"
-                                onclick="currentApplicantsEventId='${event.id}';renderAdminPanel('applications');">
+                                onclick="currentApplicantsEventId='${event.id}';currentRoleFilter='all';renderAdminPanel('applications');">
                             Список участников
                         </button>
                         <button class="btn-export-excel" onclick="exportToExcel('${event.id}')">
@@ -379,13 +385,18 @@ function renderEventApplicants(container, eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) { currentApplicantsEventId = null; renderApplicationsOverview(container); return; }
 
-    const apps  = getApplications().filter(a => a.eventId === eventId);
-    const users = getUsers();
+    const allApps = getApplications().filter(a => a.eventId === eventId);
+    const users   = getUsers();
 
-    const pending  = apps.filter(a => a.status === 'pending').length;
-    const approved = apps.filter(a => a.status === 'approved').length;
-    const reserve  = apps.filter(a => a.status === 'reserve').length;
-    const rejected = apps.filter(a => a.status === 'rejected').length;
+    const pending  = allApps.filter(a => a.status === 'pending').length;
+    const approved = allApps.filter(a => a.status === 'approved').length;
+    const reserve  = allApps.filter(a => a.status === 'reserve').length;
+    const rejected = allApps.filter(a => a.status === 'rejected').length;
+
+    // Применяем фильтр по роли
+    const apps = (event.allowOrganizerRole && currentRoleFilter !== 'all')
+        ? allApps.filter(a => (a.applicationRole || 'participant') === currentRoleFilter)
+        : allApps;
 
     // Текстовые поля формы (для столбцов таблицы)
     const textFields = (event.formFields || []).filter(f => f.type !== 'file');
@@ -403,7 +414,7 @@ function renderEventApplicants(container, eventId) {
         </div>
 
         <!-- Сводка и кнопки экспорта -->
-        <div style="display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <span class="status-badge badge-pending">${pending} ожидают</span>
                 <span class="status-badge badge-approved">${approved} одобрено</span>
@@ -418,7 +429,30 @@ function renderEventApplicants(container, eventId) {
                     Скачать Word
                 </button>
             </div>
-        </div>`;
+        </div>
+
+        ${event.allowOrganizerRole ? `
+        <!-- Фильтр по роли -->
+        <div style="display:flex;gap:8px;margin-bottom:18px;">
+            <button onclick="filterApplicantsByRole('all')"
+                    style="padding:7px 18px;border-radius:20px;border:2px solid #064591;font-size:14px;font-weight:600;cursor:pointer;
+                           background:${currentRoleFilter==='all'?'#064591':'#fff'};
+                           color:${currentRoleFilter==='all'?'#fff':'#064591'};">
+                Все
+            </button>
+            <button onclick="filterApplicantsByRole('participant')"
+                    style="padding:7px 18px;border-radius:20px;border:2px solid #10b981;font-size:14px;font-weight:600;cursor:pointer;
+                           background:${currentRoleFilter==='participant'?'#10b981':'#fff'};
+                           color:${currentRoleFilter==='participant'?'#fff':'#10b981'};">
+                Участники
+            </button>
+            <button onclick="filterApplicantsByRole('organizer')"
+                    style="padding:7px 18px;border-radius:20px;border:2px solid #d97706;font-size:14px;font-weight:600;cursor:pointer;
+                           background:${currentRoleFilter==='organizer'?'#d97706':'#fff'};
+                           color:${currentRoleFilter==='organizer'?'#fff':'#d97706'};">
+                Организаторы
+            </button>
+        </div>` : ''}`;
 
     if (apps.length === 0) {
         html += '<p style="color:#6b7280;font-size:17px;">Заявок пока нет</p>';

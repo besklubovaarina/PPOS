@@ -26,17 +26,18 @@ function openProfileModal() {
     document.getElementById('profile-modal').style.display = 'flex';
 
     if (isAdmin()) {
-        ['my-events', 'my-group', 'documents'].forEach(t => {
+        ['my-events', 'my-group'].forEach(t => {
             const btn = document.getElementById('profile-tab-' + t);
             if (btn) btn.style.display = 'none';
         });
+        const docBtn = document.getElementById('profile-tab-documents');
+        if (docBtn) docBtn.style.display = '';
         switchProfileTab('info');
     } else {
         ['my-events', 'my-group', 'documents'].forEach(t => {
             const btn = document.getElementById('profile-tab-' + t);
             if (btn) btn.style.display = '';
         });
-        renderDocumentStatuses(user);
         renderMyEventsInProfile();
         renderGroupInProfile();
         switchProfileTab('info');
@@ -58,6 +59,7 @@ function switchProfileTab(tab) {
         if (tabBtn)  tabBtn.classList.toggle('active', t === tab);
         if (tabPane) tabPane.style.display = t === tab ? 'block' : 'none';
     });
+    if (tab === 'documents') renderDocumentPane();
 }
 
 /* ================================================================
@@ -234,23 +236,149 @@ function addMemberFromProfile() {
 }
 
 /* ================================================================
-   СТАТУСЫ ДОКУМЕНТОВ
+   ВКЛАДКА ДОКУМЕНТОВ — РЕНДЕР
    ================================================================ */
-function renderDocumentStatuses(user) {
-    const docs = user.documents || {};
-    const docTypes = [
-        { key: 'consent',    icon: '📋', label: 'Согласие на обработку данных' },
-        { key: 'accounting', icon: '📝', label: 'Заявление в бухгалтерию' },
-        { key: 'join',       icon: '✍️',  label: 'Заявление на вступление' },
-    ];
+function renderDocumentPane() {
+    const container = document.getElementById('docs-pane-content');
+    if (!container) return;
 
-    docTypes.forEach(dt => {
-        const statusEl = document.getElementById('doc-status-' + dt.key);
-        if (statusEl) {
-            statusEl.textContent  = docs[dt.key] ? 'Загружен ✓' : 'Не загружен';
-            statusEl.style.color  = docs[dt.key] ? 'var(--green)' : 'var(--gray-500)';
-        }
-    });
+    if (isAdmin()) {
+        _renderDocsPaneAdmin(container);
+    } else {
+        _renderDocsPaneStudent(container);
+    }
+}
+
+function _docStatusHtml(uploaded) {
+    return uploaded
+        ? `<span style="color:var(--green);font-size:13px;font-weight:600;">Загружен ✓</span>`
+        : `<span style="color:var(--gray-500);font-size:13px;">Не загружен</span>`;
+}
+
+function _renderDocsPaneStudent(container) {
+    const user = getCurrentUser();
+    const docs = (user && user.documents) || {};
+    const extra = docs.extraFiles || [];
+
+    const extraListHtml = extra.length
+        ? extra.map((f, i) => `
+            <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                <span style="font-size:13px;flex:1;color:#163a6f;">📎 ${escapeHTML(f.name)}</span>
+                <button onclick="removeExtraDoc(${i})"
+                        style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;line-height:1;" title="Удалить">✕</button>
+            </div>`).join('')
+        : '';
+
+    container.innerHTML = `
+        <p style="color:#163a6f;font-size:16px;margin-bottom:20px;line-height:1.6;">
+            Для участия в мероприятиях ППОС необходимо состоять в профсоюзе.
+        </p>
+        <div class="documents-section" style="padding:0;background:transparent;">
+
+            <!-- Заявление в бухгалтерию -->
+            <div class="doc-card">
+                <span class="doc-icon">📝</span>
+                <div class="doc-info" style="flex:1;">
+                    <strong>Заявление в бухгалтерию</strong>
+                    <div style="margin-top:4px;">${_docStatusHtml(docs.accounting)}</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <a href="files/zayavlenie-shablon.docx" download
+                       style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">
+                        ↓ Шаблон
+                    </a>
+                    <label style="cursor:pointer;">
+                        <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
+                        <input type="file" accept="image/*,.pdf" style="display:none;"
+                               onchange="uploadDocument('accounting', event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Заявление на вступление -->
+            <div class="doc-card">
+                <span class="doc-icon">✍️</span>
+                <div class="doc-info" style="flex:1;">
+                    <strong>Заявление на вступление в профсоюз</strong>
+                    <div style="margin-top:4px;">${_docStatusHtml(docs.join)}</div>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <a href="files/zayavlenie-shablon.docx" download
+                       style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">
+                        ↓ Шаблон
+                    </a>
+                    <label style="cursor:pointer;">
+                        <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
+                        <input type="file" accept="image/*,.pdf" style="display:none;"
+                               onchange="uploadDocument('join', event)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Загрузить документы -->
+            <div class="doc-card">
+                <span class="doc-icon">📎</span>
+                <div class="doc-info" style="flex:1;">
+                    <strong>Загрузить документы</strong>
+                    ${extraListHtml}
+                </div>
+                <label style="cursor:pointer;">
+                    <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
+                    <input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none;"
+                           onchange="uploadExtraDoc(event)">
+                </label>
+            </div>
+
+        </div>
+
+        ${_renderDownloadableDocsSection(false)}`;
+}
+
+function _renderDocsPaneAdmin(container) {
+    container.innerHTML = _renderDownloadableDocsSection(true);
+}
+
+function _renderDownloadableDocsSection(adminMode) {
+    const docs = getDownloadableDocs();
+
+    const itemsHtml = docs.length
+        ? docs.map(d => `
+            <div class="doc-card">
+                <span class="doc-icon">📄</span>
+                <div class="doc-info" style="flex:1;">
+                    <strong>${escapeHTML(d.name)}</strong>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <a href="${d.dataUrl}" download="${escapeHTML(d.name)}"
+                       style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);font-size:13px;font-weight:600;text-decoration:none;">
+                        ↓ Скачать
+                    </a>
+                    ${adminMode ? `<button onclick="adminDeleteDownloadableDoc('${d.id}')"
+                        style="padding:7px 12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Удалить</button>` : ''}
+                </div>
+            </div>`).join('')
+        : `<p style="color:var(--gray-500);font-size:15px;">Документы не добавлены</p>`;
+
+    const adminUpload = adminMode ? `
+        <div style="margin-top:14px;">
+            <label style="cursor:pointer;">
+                <span class="file-input-btn" style="font-size:14px;padding:9px 18px;">+ Добавить документ</span>
+                <input type="file" accept=".pdf,.doc,.docx" style="display:none;"
+                       onchange="adminUploadDownloadableDoc(this)">
+            </label>
+            <p style="color:var(--gray-500);font-size:13px;margin-top:8px;">PDF или DOCX — будет доступен студентам для скачивания</p>
+        </div>` : '';
+
+    return `
+        <div style="margin-top:${adminMode ? 0 : 24}px;">
+            <h4 style="color:#033b7c;font-size:17px;font-weight:700;margin-bottom:14px;">
+                Документы для скачивания
+            </h4>
+            <div class="documents-section" style="padding:0;background:transparent;">
+                ${itemsHtml}
+            </div>
+            ${adminUpload}
+        </div>`;
 }
 
 /* ================================================================
@@ -300,10 +428,92 @@ function uploadDocument(type, event) {
             saveUsers(users);
         }
 
-        renderDocumentStatuses(user);
+        renderDocumentPane();
         showNotification('Документ загружен', 'success');
     };
     reader.readAsDataURL(file);
+}
+
+/* ================================================================
+   ЗАГРУЗКА ДОПОЛНИТЕЛЬНЫХ ДОКУМЕНТОВ СТУДЕНТОМ
+   ================================================================ */
+function uploadExtraDoc(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('Файл слишком большой. Максимум 10 МБ', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const user = getCurrentUser();
+        if (!user) return;
+
+        if (!user.documents) user.documents = {};
+        if (!Array.isArray(user.documents.extraFiles)) user.documents.extraFiles = [];
+        user.documents.extraFiles.push({ name: file.name, dataUrl: ev.target.result });
+
+        setCurrentUser(user);
+        const users = getUsers();
+        if (users[user.username]) {
+            users[user.username].documents = user.documents;
+            saveUsers(users);
+        }
+
+        renderDocumentPane();
+        showNotification('Документ загружен', 'success');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeExtraDoc(index) {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    if (!user.documents?.extraFiles) return;
+    user.documents.extraFiles.splice(index, 1);
+
+    setCurrentUser(user);
+    const users = getUsers();
+    if (users[user.username]) {
+        users[user.username].documents = user.documents;
+        saveUsers(users);
+    }
+
+    renderDocumentPane();
+}
+
+/* ================================================================
+   УПРАВЛЕНИЕ ДОКУМЕНТАМИ ДЛЯ СКАЧИВАНИЯ (АДМИНИСТРАТОР)
+   ================================================================ */
+function adminUploadDownloadableDoc(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('Файл слишком большой. Максимум 10 МБ', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const docs = getDownloadableDocs();
+        docs.push({ id: Date.now().toString(), name: file.name, dataUrl: ev.target.result });
+        saveDownloadableDocs(docs);
+        renderDocumentPane();
+        showNotification('Документ добавлен', 'success');
+    };
+    reader.readAsDataURL(file);
+}
+
+function adminDeleteDownloadableDoc(id) {
+    if (!confirm('Удалить документ?')) return;
+    const docs = getDownloadableDocs().filter(d => d.id !== id);
+    saveDownloadableDocs(docs);
+    renderDocumentPane();
+    showNotification('Документ удалён', 'warning');
 }
 
 /* ================================================================
