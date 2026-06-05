@@ -412,8 +412,8 @@ function uploadDocument(type, event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const MAX = 500 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -441,8 +441,8 @@ function uploadExtraDoc(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const MAX = 500 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -484,8 +484,8 @@ function adminUploadDownloadableDoc(input) {
     const file = input.files[0];
     if (!file) return;
 
-    const MAX = 500 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
