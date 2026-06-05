@@ -323,7 +323,7 @@ function _renderDocsPaneStudent(container) {
                     <span class="doc-icon">📎</span>
                     <div style="flex:1;">
                         <strong>Загрузить документы</strong>
-                        <div style="color:var(--gray-500);font-size:12px;margin-top:2px;">JPG, PDF, DOC, DOCX — до 50 МБ</div>
+                        <div style="color:var(--gray-500);font-size:12px;margin-top:2px;">JPG, PDF, DOC, DOCX</div>
                     </div>
                     <label style="cursor:pointer;">
                         <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
@@ -371,7 +371,7 @@ function _renderDownloadableDocsSection(adminMode) {
                 <input type="file" accept=".pdf,.doc,.docx" style="display:none;"
                        onchange="adminUploadDownloadableDoc(this)">
             </label>
-            <p style="color:var(--gray-500);font-size:13px;margin-top:8px;">PDF или DOCX, до 50 МБ — будет доступен студентам для скачивания</p>
+            <p style="color:var(--gray-500);font-size:13px;margin-top:8px;">PDF или DOCX — будет доступен студентам для скачивания</p>
         </div>` : '';
 
     return `
@@ -412,8 +412,8 @@ function uploadDocument(type, event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const MAX = 50 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ', 'error'); return; }
+    const MAX = 500 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -441,8 +441,8 @@ function uploadExtraDoc(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const MAX = 50 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ', 'error'); return; }
+    const MAX = 500 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
@@ -484,8 +484,8 @@ function adminUploadDownloadableDoc(input) {
     const file = input.files[0];
     if (!file) return;
 
-    const MAX = 50 * 1024 * 1024;
-    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ', 'error'); return; }
+    const MAX = 500 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 500 МБ', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
