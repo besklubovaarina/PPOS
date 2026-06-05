@@ -1321,6 +1321,8 @@ function showCertificate(eventId) {
         </div>`;
 
     document.getElementById('certificate-content').innerHTML = certHTML;
+    const certTitle = document.getElementById('certificate-modal-title');
+    if (certTitle) certTitle.textContent = isOrganizer ? '🏆 Сертификат организатора' : '🏆 Сертификат участника';
     document.getElementById('certificate-modal').style.display = 'flex';
 }
 
