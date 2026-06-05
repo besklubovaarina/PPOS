@@ -1233,6 +1233,11 @@ textarea.form-input {
     max-width: 860px;
 }
 
+.modal-content.cert-modal {
+    max-width: 920px;
+    padding: 30px 24px 24px;
+}
+
 @keyframes modalIn {
     from { transform: translateY(-24px) scale(0.98); opacity: 0; }
     to   { transform: translateY(0) scale(1); opacity: 1; }
@@ -1476,9 +1481,9 @@ textarea.form-input {
     max-width: 800px;
     width: 100%;
     aspect-ratio: 1.414 / 1;
-    min-height: 380px;
     border-radius: var(--radius-sm);
     box-shadow: var(--shadow-lg);
+    overflow: hidden;
 }
 
 .cert-name-overlay {

@@ -862,6 +862,8 @@ function showGroupMembers(groupName) {
     html += `</div>`;
 
     document.getElementById('modal-description').innerHTML = html;
+    const titleEl = document.getElementById('description-modal-title');
+    if (titleEl) titleEl.textContent = 'Группа ' + groupName;
     document.getElementById('description-modal').style.display = 'flex';
 }
 
