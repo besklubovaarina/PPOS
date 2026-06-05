@@ -810,14 +810,14 @@ function openEditEventForm(eventId) {
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
 
-    // Сбрасываем старые данные и загружаем превью существующих шаблонов
+    // Сбрасываем и загружаем превью из отдельных ключей
     _certImgData = { participant: null, organizer: null };
     ['participant', 'organizer'].forEach(role => {
-        const imgKey = role === 'participant' ? 'certificateParticipantImg' : 'certificateOrganizerImg';
+        const stored = getCertTemplate(event.id, role);
         const prev   = document.getElementById('cert-' + role + '-preview');
         const nameEl = document.getElementById('cert-' + role + '-name');
-        if (event[imgKey]) {
-            if (prev)   { prev.src = event[imgKey]; prev.style.display = 'inline-block'; }
+        if (stored) {
+            if (prev)   { prev.src = stored; prev.style.display = 'inline-block'; }
             if (nameEl) nameEl.textContent = 'Загружен';
         } else {
             if (prev)   { prev.src = ''; prev.style.display = 'none'; }
@@ -849,10 +849,24 @@ function handleCertFileSelect(input, role) {
     const nameEl    = document.getElementById('cert-' + role + '-name');
     const previewEl = document.getElementById('cert-' + role + '-preview');
     if (nameEl) nameEl.textContent = file.name;
+
     const reader = new FileReader();
     reader.onload = e => {
-        _certImgData[role] = e.target.result;
-        if (previewEl) { previewEl.src = e.target.result; previewEl.style.display = 'inline-block'; }
+        // Масштабируем до max 2000px при сохранении исходного качества PNG
+        const img = new Image();
+        img.onload = () => {
+            const MAX = 2000;
+            const scale = img.width > MAX ? MAX / img.width : 1;
+            const canvas = document.createElement('canvas');
+            canvas.width  = Math.round(img.width  * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            // PNG для точного воспроизведения — без потерь
+            const dataUrl = canvas.toDataURL('image/png');
+            _certImgData[role] = dataUrl;
+            if (previewEl) { previewEl.src = dataUrl; previewEl.style.display = 'inline-block'; }
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
@@ -891,13 +905,12 @@ function addEvent() {
         const status = document.getElementById('new-event-status')?.value || 'open';
         const idx = events.findIndex(e => e.id === currentEditEventId);
         if (idx !== -1) {
-            // Сохраняем cert-изображения: новая загрузка перекрывает существующую
-            const certPartImg = _certImgData.participant
-                || (hasCertificate ? events[idx].certificateParticipantImg : null)
-                || null;
-            const certOrgImg  = _certImgData.organizer
-                || (hasCertificate && allowOrganizerRole ? events[idx].certificateOrganizerImg : null)
-                || null;
+            const evId = events[idx].id;
+            // Сохраняем шаблоны в отдельные ключи localStorage
+            if (_certImgData.participant) saveCertTemplate(evId, 'participant', _certImgData.participant);
+            if (_certImgData.organizer)   saveCertTemplate(evId, 'organizer',   _certImgData.organizer);
+            // Если сертификаты отключены — удаляем шаблоны
+            if (!hasCertificate) deleteCertTemplates(evId);
 
             events[idx] = {
                 ...events[idx],
@@ -905,39 +918,41 @@ function addEvent() {
                 date,
                 time,
                 type,
-                description:              desc,
-                maxParticipants:          max,
-                reserveCount:             events[idx].reserveCount || 0,
-                requiresForm:             needsForm,
+                description:     desc,
+                maxParticipants: max,
+                reserveCount:    events[idx].reserveCount || 0,
+                requiresForm:    needsForm,
                 formFields,
                 status,
                 hasCertificate,
                 allowOrganizerRole,
-                certificateParticipantImg: certPartImg,
-                certificateOrganizerImg:   certOrgImg,
-                attachments:              adminEventAttachments.map(f => ({ ...f })),
+                attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
+            // Убираем устаревшие inline-поля если они были
+            delete events[idx].certificateParticipantImg;
+            delete events[idx].certificateOrganizerImg;
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
         // Режим добавления
+        const newId = Date.now().toString();
+        if (_certImgData.participant) saveCertTemplate(newId, 'participant', _certImgData.participant);
+        if (_certImgData.organizer)   saveCertTemplate(newId, 'organizer',   _certImgData.organizer);
         events.push({
-            id:                        Date.now().toString(),
+            id:              newId,
             title,
             date,
             time,
             type,
-            description:               desc,
-            maxParticipants:           max,
-            reserveCount:              0,
-            requiresForm:              needsForm,
+            description:     desc,
+            maxParticipants: max,
+            reserveCount:    0,
+            requiresForm:    needsForm,
             formFields,
-            status:                    'open',
+            status:          'open',
             hasCertificate,
             allowOrganizerRole,
-            certificateParticipantImg: _certImgData.participant || null,
-            certificateOrganizerImg:   _certImgData.organizer   || null,
-            attachments:               adminEventAttachments.map(f => ({ ...f })),
+            attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
         showNotification('Мероприятие добавлено', 'success');
     }
@@ -1274,8 +1289,8 @@ function showCertificate(eventId) {
 
     const isOrganizer = myApp.applicationRole === 'organizer';
     const certImage   = isOrganizer
-        ? (event.certificateOrganizerImg || event.certificateParticipantImg || null)
-        : (event.certificateParticipantImg || null);
+        ? (getCertTemplate(event.id, 'organizer') || getCertTemplate(event.id, 'participant'))
+        : getCertTemplate(event.id, 'participant');
 
     if (!certImage) {
         showNotification('Шаблон сертификата ещё не загружен администратором', 'warning');
@@ -1312,7 +1327,7 @@ function printCertificate() {
     const area = document.getElementById('cert-print-area');
     if (!area) return;
 
-    const printWin = window.open('', '_blank', 'width=900,height=700');
+    const printWin = window.open('', '_blank', 'width=600,height=900');
     printWin.document.write(`
         <!DOCTYPE html>
         <html>
@@ -1320,14 +1335,17 @@ function printCertificate() {
             <meta charset="UTF-8">
             <title>Сертификат</title>
             <style>
-                @media print { button { display: none !important; } }
+                @media print {
+                    button { display: none !important; }
+                    @page { size: A5 portrait; margin: 10mm; }
+                }
                 body { margin:0; padding:20px; display:flex; justify-content:center;
-                       align-items:center; min-height:100vh; font-family:Arial,sans-serif;
+                       align-items:flex-start; min-height:100vh; font-family:Arial,sans-serif;
                        background:#fff; }
                 .certificate-container {
                     position:relative; display:block;
-                    max-width:800px; width:100%;
-                    aspect-ratio:1.414/1;
+                    max-width:460px; width:100%;
+                    aspect-ratio:1/1.414;
                     overflow:hidden;
                     border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.18);
                     -webkit-print-color-adjust:exact; print-color-adjust:exact;

@@ -30,7 +30,41 @@ function getEventsFromStorage() {
 }
 
 function saveEventsToStorage(events) {
-    localStorage.setItem(KEYS.EVENTS, JSON.stringify(events));
+    try {
+        localStorage.setItem(KEYS.EVENTS, JSON.stringify(events));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            showNotification('Ошибка: недостаточно места в хранилище браузера.', 'error');
+        } else {
+            throw e;
+        }
+    }
+}
+
+/* ---------- Шаблоны сертификатов (хранятся отдельно от событий) ---------- */
+function getCertTemplate(eventId, role) {
+    return localStorage.getItem('ppos_cert_' + role + '_' + eventId) || null;
+}
+
+function saveCertTemplate(eventId, role, dataUrl) {
+    try {
+        if (dataUrl) {
+            localStorage.setItem('ppos_cert_' + role + '_' + eventId, dataUrl);
+        } else {
+            localStorage.removeItem('ppos_cert_' + role + '_' + eventId);
+        }
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+            showNotification('Ошибка: файл шаблона слишком большой для сохранения.', 'error');
+        } else {
+            throw e;
+        }
+    }
+}
+
+function deleteCertTemplates(eventId) {
+    localStorage.removeItem('ppos_cert_participant_' + eventId);
+    localStorage.removeItem('ppos_cert_organizer_'   + eventId);
 }
 
 /* ---------- Участники группы ---------- */
