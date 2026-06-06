@@ -223,11 +223,11 @@ router.post('/pending-changes', async (req, res) => {
         const c = req.body;
         await pool.query(
             `INSERT INTO "Ожидающие_изменения_профиля"
-             (id,"id_Студент","Тип","Старое_ФИО","Новое_ФИО",
+             (id,"id_Студент","Старое_ФИО","Новое_ФИО",
               "Старая_группа","Новая_группа","Старый_телефон","Новый_телефон",
               "Старый_email","Новый_email","Старый_аватар","Новый_аватар")
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-            [c.id, c.studentId, c.type,
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+            [c.id, c.studentId,
              c.oldFullName, c.newFullName,
              c.oldGroup, c.newGroup,
              c.oldPhone, c.newPhone,

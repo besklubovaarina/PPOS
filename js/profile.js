@@ -543,7 +543,6 @@ function saveProfileChanges() {
     const change = {
         id:          Date.now().toString(),
         username:    user.username,
-        type:        'profile_update',
         timestamp:   new Date().toLocaleString('ru-RU'),
         status:      'pending',
         oldFullName: user.fullName,

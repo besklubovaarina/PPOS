@@ -302,13 +302,12 @@ CREATE TABLE IF NOT EXISTS "Документы_для_скачивания" (
 
 -- Ожидающие изменения профиля (студент подаёт → admin одобряет)
 CREATE TABLE IF NOT EXISTS "Ожидающие_изменения_профиля" (
-    id              VARCHAR(50) PRIMARY KEY,
-    "id_Студент"    INTEGER REFERENCES "Студент"(id),
-    "Тип"           VARCHAR(50),
-    "Старое_ФИО"    VARCHAR(255),
-    "Новое_ФИО"     VARCHAR(255),
-    "Старая_группа" VARCHAR(50),
-    "Новая_группа"  VARCHAR(50),
+    id               VARCHAR(50) PRIMARY KEY,
+    "id_Студент"     INTEGER REFERENCES "Студент"(id),
+    "Старое_ФИО"     VARCHAR(255),
+    "Новое_ФИО"      VARCHAR(255),
+    "Старая_группа"  VARCHAR(50),
+    "Новая_группа"   VARCHAR(50),
     "Старый_телефон" VARCHAR(30),
     "Новый_телефон"  VARCHAR(30),
     "Старый_email"   VARCHAR(100),
