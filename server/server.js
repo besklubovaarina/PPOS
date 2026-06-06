@@ -24,6 +24,7 @@ app.use('/api/users',         require('./routes/users'));
 app.use('/api/applications',  require('./routes/applications'));
 app.use('/api/documents',     require('./routes/documents'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/certificates',  require('./routes/certificates'));
 
 // Проверочный маршрут — чтобы убедиться что сервер работает
 app.get('/api/health', (req, res) => {
