@@ -185,10 +185,9 @@ CREATE TABLE IF NOT EXISTS "Сертификат" (
     id               SERIAL PRIMARY KEY,
     "Номер"          SERIAL,                  -- учётный номер, только в БД
     "Роль"           VARCHAR(20) NOT NULL,    -- участник / организатор
-    "Дата"           DATE DEFAULT CURRENT_DATE, -- дата загрузки шаблона
     "Шаблон"         TEXT,                    -- base64 изображения шаблона
     "id_Мероприятие" INTEGER REFERENCES "Мероприятие"(id) ON DELETE CASCADE,
-    UNIQUE("id_Мероприятие", "Роль")          -- одна роль = один шаблон на мероприятие
+    UNIQUE("id_Мероприятие", "Роль")
 );
 
 
