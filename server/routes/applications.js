@@ -63,8 +63,7 @@ router.get('/student/:studentId', async (req, res) => {
                     с."id_Мероприятие" as event_id,
                     м."Название" as event_title,
                     м."Дата", м."Время",
-                    м."Статус" as event_status,
-                    м."Есть_сертификат" as has_certificate
+                    м."Статус" as event_status
              FROM ${TABLE} с
              JOIN "Мероприятие" м ON с."id_Мероприятие" = м.id
              WHERE с."id_Студент" = $1

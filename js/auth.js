@@ -48,11 +48,21 @@ async function handleLogin() {
             phone:          u.phone || '',
             email:          u.email || '',
             avatarDataUrl:  u.avatarDataUrl || '',
-            enrolledEvents: u.enrolledEvents || [],
+            enrolledEvents: [],
             reminders:      [],
             documents:      {},
             studentId:      u.studentId,
         };
+
+        // Загружаем записанные мероприятия из БД
+        if (u.studentId) {
+            const appResult = await apiGetApplications(u.studentId);
+            if (appResult.success && appResult.applications) {
+                sessionUser.enrolledEvents = appResult.applications
+                    .filter(a => a['Статус'] !== 'rejected')
+                    .map(a => String(a.event_id));
+            }
+        }
     } else if (result.error === 'Нет соединения с сервером') {
         // Сервер недоступен — входим через localStorage
         const users = getUsers();

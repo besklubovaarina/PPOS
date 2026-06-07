@@ -634,7 +634,7 @@ function _showRegErrors(errors) {
 }
 
 /** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
-function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
+async function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
     // Повторная проверка лимита (за время читатели FileReader могли успеть)
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
@@ -642,6 +642,28 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
         showNotification('К сожалению, мест больше нет', 'error');
         closeRegistrationModal();
         return;
+    }
+
+    let appId = Date.now().toString();
+
+    // Отправляем заявку на сервер
+    if (user.studentId) {
+        const result = await apiCreateApplication({
+            eventId:   eventId,
+            studentId: user.studentId,
+            role:      appRole,
+        });
+        if (result.success) {
+            appId = String(result.id);
+        } else if (result.error === 'Вы уже подали заявку') {
+            showNotification('Вы уже подали заявку на это мероприятие', '');
+            closeRegistrationModal();
+            return;
+        } else if (result.error !== 'Нет соединения с сервером') {
+            showNotification(result.error || 'Ошибка при подаче заявки', 'error');
+            closeRegistrationModal();
+            return;
+        }
     }
 
     // Добавляем в список мероприятий пользователя
@@ -653,10 +675,10 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
         user.reminders = user.reminders.filter(id => id !== eventId);
     }
 
-    // Создаём заявку
+    // Создаём заявку в localStorage
     const apps = getApplications();
     apps.push({
-        id:              Date.now().toString(),
+        id:              appId,
         username:        user.username,
         fullName:        user.fullName,
         eventId,
@@ -686,14 +708,20 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
 /* ================================================================
    ОТМЕНА ЗАПИСИ (без формы — прямое действие)
    ================================================================ */
-function cancelEnroll(eventId) {
+async function cancelEnroll(eventId) {
     if (!isLoggedIn()) return;
     if (!confirm('Отменить запись на это мероприятие?')) return;
 
     const user = getCurrentUser();
+
+    // Отменяем на сервере
+    if (user.studentId) {
+        await apiDeleteApplication(eventId, user.studentId);
+    }
+
     user.enrolledEvents = (user.enrolledEvents || []).filter(id => id !== eventId);
 
-    // Удаляем все заявки студента на это мероприятие
+    // Удаляем заявку из localStorage
     let apps = getApplications();
     apps = apps.filter(a => !(a.eventId === eventId && a.username === user.username));
     saveApplications(apps);
@@ -884,7 +912,7 @@ function handleCertFileSelect(input, role) {
 }
 
 /** Сохраняет новое или изменённое мероприятие. */
-function addEvent() {
+async function addEvent() {
     const title       = document.getElementById('new-event-title')?.value.trim();
     const date        = document.getElementById('new-event-date')?.value.trim();
     const time        = document.getElementById('new-event-time')?.value.trim();
@@ -919,19 +947,13 @@ function addEvent() {
         const idx = events.findIndex(e => String(e.id) === String(currentEditEventId));
         if (idx !== -1) {
             const evId = events[idx].id;
-            // Сохраняем шаблоны в отдельные ключи localStorage
             if (_certImgData.participant) saveCertTemplate(evId, 'participant', _certImgData.participant);
             if (_certImgData.organizer)   saveCertTemplate(evId, 'organizer',   _certImgData.organizer);
-            // Если сертификаты отключены — удаляем шаблоны
             if (!hasCertificate) deleteCertTemplates(evId);
 
             events[idx] = {
                 ...events[idx],
-                title,
-                date,
-                time,
-                location,
-                type,
+                title, date, time, location, type,
                 description:     desc,
                 maxParticipants: max,
                 reserveCount:    events[idx].reserveCount || 0,
@@ -942,23 +964,40 @@ function addEvent() {
                 allowOrganizerRole,
                 attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
-            // Убираем устаревшие inline-поля если они были
             delete events[idx].certificateParticipantImg;
             delete events[idx].certificateOrganizerImg;
+
+            saveEventsToStorage(events);
+
+            // Обновляем на сервере
+            apiUpdateEvent(evId, {
+                title, description: desc, date, time, type, location,
+                maxParticipants: max, status, allowOrganizerRole,
+                requiresForm: needsForm,
+                formFields: JSON.stringify(formFields),
+                certParticipantData: _certImgData.participant || undefined,
+                certOrganizerData:   _certImgData.organizer   || undefined,
+            });
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
-        // Режим добавления
-        const newId = Date.now().toString();
+        // Режим добавления — сначала сохраняем на сервере, получаем ID
+        const serverResult = await apiCreateEvent({
+            title, description: desc, date, time, type, location,
+            maxParticipants: max, status: 'open', allowOrganizerRole,
+            requiresForm: needsForm,
+            formFields: JSON.stringify(formFields),
+            certParticipantData: _certImgData.participant || undefined,
+            certOrganizerData:   _certImgData.organizer   || undefined,
+        });
+
+        const newId = serverResult.success ? String(serverResult.id) : Date.now().toString();
+
         if (_certImgData.participant) saveCertTemplate(newId, 'participant', _certImgData.participant);
         if (_certImgData.organizer)   saveCertTemplate(newId, 'organizer',   _certImgData.organizer);
         events.push({
             id:              newId,
-            title,
-            date,
-            time,
-            location,
-            type,
+            title, date, time, location, type,
             description:     desc,
             maxParticipants: max,
             reserveCount:    0,
@@ -969,10 +1008,11 @@ function addEvent() {
             allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
+
+        saveEventsToStorage(events);
         showNotification('Мероприятие добавлено', 'success');
     }
 
-    saveEventsToStorage(events);
     cancelAddEvent();
     renderAllEvents();
 }
@@ -1182,8 +1222,14 @@ function renderMyEventsSection() {
 /* ================================================================
    УДАЛЕНИЕ МЕРОПРИЯТИЯ
    ================================================================ */
-function confirmDeleteEvent(eventId) {
+async function confirmDeleteEvent(eventId) {
     if (!confirm('Удалить это мероприятие? Все связанные заявки также будут удалены.')) return;
+
+    const result = await apiDeleteEvent(eventId);
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка при удалении: ' + (result.error || ''), 'error');
+        return;
+    }
 
     let events = getEventsFromStorage() || [];
     events = events.filter(e => e.id !== eventId);

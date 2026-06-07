@@ -84,9 +84,11 @@ CREATE TABLE Мероприятие (
     Тип VARCHAR(100),
     Место VARCHAR(255),
     Макс_участников INT DEFAULT 0,
-    Статус VARCHAR(20) DEFAULT 'открыто',
+    Статус VARCHAR(20) DEFAULT 'open',
     Разрешить_организатора BOOLEAN DEFAULT FALSE,
     Изображение TEXT,
+    Требует_форму BOOLEAN DEFAULT FALSE,
+    Поля_формы TEXT,
     Дата_создания TIMESTAMP DEFAULT NOW()
 );
 
