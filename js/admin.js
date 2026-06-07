@@ -583,7 +583,7 @@ function approveApplication(appId) {
 
     // Уведомление участнику
     addUserNotification(app.username, {
-        type:       'approval',
+        type:       'одобрение',
         message:    `Ваша заявка на мероприятие «${event?.title || 'Мероприятие'}» одобрена!`,
         eventTitle: event?.title || '',
     });
@@ -628,7 +628,7 @@ function rejectApplication(appId) {
 
     // Уведомление участнику об отказе
     addUserNotification(app.username, {
-        type:       'rejection',
+        type:       'отклонение',
         message:    `К сожалению, ваша заявка на «${event?.title || 'Мероприятие'}» не прошла отбор.`,
         eventTitle: event?.title || '',
     });
@@ -879,7 +879,7 @@ function showGroupMembers(groupName) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h3 style="color:#033b7c;font-size:22px;font-weight:700;">Группа ${escapeHTML(groupName)}</h3>
         </div>
-        <div class="grid-7">`;
+        <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:flex-start;">`;
 
     members.forEach(m => {
         const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);
@@ -900,6 +900,8 @@ function showGroupMembers(groupName) {
     document.getElementById('modal-description').innerHTML = html;
     const titleEl = document.getElementById('description-modal-title');
     if (titleEl) titleEl.textContent = 'Группа ' + groupName;
+    const mc = document.querySelector('#description-modal .modal-content');
+    if (mc) mc.classList.add('wide');
     document.getElementById('description-modal').style.display = 'flex';
 }
 

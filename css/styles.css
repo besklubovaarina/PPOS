@@ -72,7 +72,7 @@ body {
     overflow: hidden;
     display: flex;
     align-items: flex-start;
-    min-height: 500px;
+    min-height: 380px;
 }
 
 .header-content {
@@ -456,6 +456,8 @@ body {
     flex-direction: column;
     align-items: center;
     position: relative;
+    width: 150px;
+    flex-shrink: 0;
 }
 
 .member-avatar {

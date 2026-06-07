@@ -249,10 +249,10 @@ function renderDocumentPane() {
     }
 }
 
-function _docStatusHtml(uploaded) {
-    return uploaded
-        ? `<span style="color:var(--green);font-size:13px;font-weight:600;">Загружен ✓</span>`
-        : `<span style="color:var(--gray-500);font-size:13px;">Не загружен</span>`;
+function _docStatusHtml(meta) {
+    if (!meta) return `<span style="color:var(--gray-500);font-size:13px;">Не загружен</span>`;
+    const name = meta.name ? ` · ${escapeHTML(meta.name)}` : '';
+    return `<span style="color:var(--green);font-size:13px;font-weight:600;">Загружен ✓${name}</span>`;
 }
 
 function _renderDocsPaneStudent(container) {
@@ -264,6 +264,8 @@ function _renderDocsPaneStudent(container) {
         ? extra.map((f, i) => `
             <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
                 <span style="font-size:13px;flex:1;color:#163a6f;">📎 ${escapeHTML(f.name)}</span>
+                <button onclick="downloadDocFromDB('${escapeHTML(f.id)}','${escapeHTML(f.name).replace(/'/g,'\\\'')}',event)"
+                        style="background:none;border:none;color:var(--blue-main);cursor:pointer;font-size:14px;font-weight:600;padding:2px 6px;" title="Скачать">↓</button>
                 <button onclick="removeExtraDoc(${i})"
                         style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:18px;line-height:1;" title="Удалить">✕</button>
             </div>`).join('')
@@ -316,17 +318,20 @@ function _renderDocsPaneStudent(container) {
             </div>
 
             <!-- Загрузить документы -->
-            <div class="doc-card">
-                <span class="doc-icon">📎</span>
-                <div class="doc-info" style="flex:1;">
-                    <strong>Загрузить документы</strong>
-                    ${extraListHtml}
+            <div class="doc-card" style="flex-direction:column;align-items:flex-start;gap:10px;">
+                <div style="display:flex;align-items:center;gap:10px;width:100%;">
+                    <span class="doc-icon">📎</span>
+                    <div style="flex:1;">
+                        <strong>Загрузить документы</strong>
+                        <div style="color:var(--gray-500);font-size:12px;margin-top:2px;">JPG, PDF, DOC, DOCX</div>
+                    </div>
+                    <label style="cursor:pointer;">
+                        <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
+                        <input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none;"
+                               onchange="uploadExtraDoc(event)">
+                    </label>
                 </div>
-                <label style="cursor:pointer;">
-                    <span class="file-input-btn" style="padding:7px 14px;font-size:13px;">Загрузить</span>
-                    <input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none;"
-                           onchange="uploadExtraDoc(event)">
-                </label>
+                ${extraListHtml ? `<div style="width:100%;padding-left:42px;">${extraListHtml}</div>` : ''}
             </div>
 
         </div>
@@ -349,10 +354,10 @@ function _renderDownloadableDocsSection(adminMode) {
                     <strong>${escapeHTML(d.name)}</strong>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <a href="${d.dataUrl}" download="${escapeHTML(d.name)}"
-                       style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);font-size:13px;font-weight:600;text-decoration:none;">
+                    <button onclick="downloadDocFromDB('${escapeHTML(d.id)}','${escapeHTML(d.name).replace(/'/g,'\\\'')}',event)"
+                            style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);background:transparent;font-size:13px;font-weight:600;cursor:pointer;">
                         ↓ Скачать
-                    </a>
+                    </button>
                     ${adminMode ? `<button onclick="adminDeleteDownloadableDoc('${d.id}')"
                         style="padding:7px 12px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;">Удалить</button>` : ''}
                 </div>
@@ -401,35 +406,30 @@ function handleAvatarUpload(event) {
 }
 
 /* ================================================================
-   ЗАГРУЗКА ДОКУМЕНТА
+   ЗАГРУЗКА ДОКУМЕНТА (IndexedDB — без ограничений localStorage)
    ================================================================ */
 function uploadDocument(type, event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-        showNotification('Файл слишком большой. Максимум 10 МБ', 'error');
-        return;
-    }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
         const user = getCurrentUser();
         if (!user) return;
 
-        if (!user.documents) user.documents = {};
-        user.documents[type] = ev.target.result;
-        setCurrentUser(user);
-
-        // Сохраняем в базу пользователей
-        const users = getUsers();
-        if (users[user.username]) {
-            users[user.username].documents = user.documents;
-            saveUsers(users);
-        }
-
-        renderDocumentPane();
-        showNotification('Документ загружен', 'success');
+        const id = `doc_${user.username}_${type}`;
+        DocsDB.set(id, ev.target.result).then(() => {
+            if (!user.documents) user.documents = {};
+            user.documents[type] = { name: file.name, id };
+            setCurrentUser(user);
+            const users = getUsers();
+            if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
+            renderDocumentPane();
+            showNotification('Документ загружен', 'success');
+        }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
     };
     reader.readAsDataURL(file);
 }
@@ -441,47 +441,39 @@ function uploadExtraDoc(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-        showNotification('Файл слишком большой. Максимум 10 МБ', 'error');
-        return;
-    }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
         const user = getCurrentUser();
         if (!user) return;
 
-        if (!user.documents) user.documents = {};
-        if (!Array.isArray(user.documents.extraFiles)) user.documents.extraFiles = [];
-        user.documents.extraFiles.push({ name: file.name, dataUrl: ev.target.result });
-
-        setCurrentUser(user);
-        const users = getUsers();
-        if (users[user.username]) {
-            users[user.username].documents = user.documents;
-            saveUsers(users);
-        }
-
-        renderDocumentPane();
-        showNotification('Документ загружен', 'success');
+        const id = `extradoc_${user.username}_${Date.now()}`;
+        DocsDB.set(id, ev.target.result).then(() => {
+            if (!user.documents) user.documents = {};
+            if (!Array.isArray(user.documents.extraFiles)) user.documents.extraFiles = [];
+            user.documents.extraFiles.push({ name: file.name, id });
+            setCurrentUser(user);
+            const users = getUsers();
+            if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
+            renderDocumentPane();
+            showNotification('Документ загружен', 'success');
+        }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
     };
     reader.readAsDataURL(file);
 }
 
 function removeExtraDoc(index) {
     const user = getCurrentUser();
-    if (!user) return;
+    if (!user || !user.documents?.extraFiles) return;
 
-    if (!user.documents?.extraFiles) return;
-    user.documents.extraFiles.splice(index, 1);
+    const removed = user.documents.extraFiles.splice(index, 1)[0];
+    if (removed?.id) DocsDB.remove(removed.id).catch(() => {});
 
     setCurrentUser(user);
     const users = getUsers();
-    if (users[user.username]) {
-        users[user.username].documents = user.documents;
-        saveUsers(users);
-    }
-
+    if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
     renderDocumentPane();
 }
 
@@ -492,28 +484,45 @@ function adminUploadDownloadableDoc(input) {
     const file = input.files[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-        showNotification('Файл слишком большой. Максимум 10 МБ', 'error');
-        return;
-    }
+    const MAX = 50 * 1024 * 1024;
+    if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
     reader.onload = ev => {
-        const docs = getDownloadableDocs();
-        docs.push({ id: Date.now().toString(), name: file.name, dataUrl: ev.target.result });
-        saveDownloadableDocs(docs);
-        renderDocumentPane();
-        showNotification('Документ добавлен', 'success');
+        const id = 'dloc_' + Date.now();
+        DocsDB.set(id, ev.target.result).then(() => {
+            const docs = getDownloadableDocs();
+            docs.push({ id, name: file.name });
+            saveDownloadableDocs(docs);
+            renderDocumentPane();
+            showNotification('Документ добавлен', 'success');
+        }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
     };
     reader.readAsDataURL(file);
 }
 
 function adminDeleteDownloadableDoc(id) {
     if (!confirm('Удалить документ?')) return;
-    const docs = getDownloadableDocs().filter(d => d.id !== id);
-    saveDownloadableDocs(docs);
+    DocsDB.remove(id).catch(() => {});
+    saveDownloadableDocs(getDownloadableDocs().filter(d => d.id !== id));
     renderDocumentPane();
     showNotification('Документ удалён', 'warning');
+}
+
+/* ================================================================
+   СКАЧИВАНИЕ ФАЙЛА ИЗ IndexedDB
+   ================================================================ */
+function downloadDocFromDB(id, name, e) {
+    if (e) e.preventDefault();
+    DocsDB.get(id).then(dataUrl => {
+        if (!dataUrl) { showNotification('Файл не найден', 'error'); return; }
+        const a = document.createElement('a');
+        a.href     = dataUrl;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }).catch(() => showNotification('Ошибка при загрузке файла', 'error'));
 }
 
 /* ================================================================
@@ -534,7 +543,6 @@ function saveProfileChanges() {
     const change = {
         id:          Date.now().toString(),
         username:    user.username,
-        type:        'profile_update',
         timestamp:   new Date().toLocaleString('ru-RU'),
         status:      'pending',
         oldFullName: user.fullName,

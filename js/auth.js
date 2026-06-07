@@ -20,7 +20,7 @@ function closeLoginDialog() {
 /* ================================================================
    ОБРАБОТКА ВХОДА
    ================================================================ */
-function handleLogin() {
+async function handleLogin() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value.trim();
     const errorEl = document.getElementById('login-error');
@@ -33,46 +33,67 @@ function handleLogin() {
         return;
     }
 
-    const users = getUsers();
-    const user  = users[username];
+    let sessionUser;
+    const result = await apiLogin(username, password);
 
-    if (!user) {
-        errorEl.textContent = 'Пользователь не найден';
+    if (result.success && result.user) {
+        const u = result.user;
+        sessionUser = {
+            username:       u.username,
+            isAdmin:        u.isAdmin || false,
+            fullName:       u.fullName || u.username,
+            profileName:    u.fullName || u.username,
+            groupNumber:    u.groupNumber || '',
+            role:           u.role || 'Студент',
+            phone:          u.phone || '',
+            email:          u.email || '',
+            avatarDataUrl:  u.avatarDataUrl || '',
+            enrolledEvents: u.enrolledEvents || [],
+            reminders:      [],
+            documents:      {},
+            studentId:      u.studentId,
+        };
+    } else if (result.error === 'Нет соединения с сервером') {
+        // Сервер недоступен — входим через localStorage
+        const users = getUsers();
+        const user  = users[username];
+
+        if (!user) {
+            errorEl.textContent = 'Пользователь не найден';
+            errorEl.classList.add('show');
+            return;
+        }
+        if (user.password !== password) {
+            errorEl.textContent = 'Неверный пароль';
+            errorEl.classList.add('show');
+            return;
+        }
+        sessionUser = {
+            username:       user.username,
+            isAdmin:        user.isAdmin || false,
+            fullName:       user.fullName || user.username,
+            profileName:    user.fullName || user.username,
+            groupNumber:    user.groupNumber || '',
+            role:           user.role || 'Студент',
+            phone:          user.phone || '',
+            email:          user.email || '',
+            avatarDataUrl:  user.avatarDataUrl || '',
+            enrolledEvents: user.enrolledEvents || [],
+            reminders:      user.reminders      || [],
+            documents:      user.documents      || {},
+        };
+    } else {
+        errorEl.textContent = result.error || 'Ошибка входа';
         errorEl.classList.add('show');
         return;
     }
-
-    if (user.password !== password) {
-        errorEl.textContent = 'Неверный пароль';
-        errorEl.classList.add('show');
-        return;
-    }
-
-    // Сохраняем данные текущего пользователя в сессию
-    const sessionUser = {
-        username:       user.username,
-        isAdmin:        user.isAdmin || false,
-        fullName:       user.fullName || user.username,
-        profileName:    user.fullName || user.username,
-        groupNumber:    user.groupNumber || '',
-        role:           user.role || 'Студент',
-        phone:          user.phone || '',
-        email:          user.email || '',
-        avatarDataUrl:  user.avatarDataUrl || '',
-        enrolledEvents: user.enrolledEvents || [],
-        reminders:      user.reminders      || [],
-        documents:      user.documents      || {},
-    };
 
     setCurrentUser(sessionUser);
     closeLoginDialog();
     updateUIForAuth();
     showNotification('Добро пожаловать, ' + sessionUser.fullName + '!', 'success');
 
-    // Показываем непрочитанные уведомления (одобрения/отказы)
-    _showPendingNotifications(user.username);
-
-    // Показываем напоминания о незарегистрированных мероприятиях
+    _showPendingNotifications(sessionUser);
     setTimeout(checkAndShowReminders, 1500);
 }
 
@@ -112,22 +133,31 @@ function openLoginOrProfile() {
    ПОКАЗ УВЕДОМЛЕНИЙ ПОСЛЕ ВХОДА
    ================================================================ */
 
-/**
- * Показывает непрочитанные уведомления об одобрении/отказе заявок.
- * @param {string} username
- */
-function _showPendingNotifications(username) {
-    const notifs = getUserNotifications(username);
-    const unread = notifs.filter(n => !n.read);
-    if (unread.length === 0) return;
-
-    markNotificationsRead(username);
-    unread.forEach((n, idx) => {
-        setTimeout(() => {
-            const type = n.type === 'approval' ? 'success' : 'error';
-            showNotification(n.message, type);
-        }, 1200 + idx * 1000);
-    });
+async function _showPendingNotifications(sessionUser) {
+    if (sessionUser.studentId) {
+        const result = await apiGetNotifications(sessionUser.studentId);
+        if (!result.success || !result.notifications) return;
+        const unread = result.notifications.filter(n => !n['Прочитано']);
+        if (unread.length === 0) return;
+        apiMarkNotificationsRead(sessionUser.studentId);
+        unread.forEach((n, idx) => {
+            setTimeout(() => {
+                const type = n['Тип'] === 'одобрение' ? 'success' : 'error';
+                showNotification(n['Сообщение'], type);
+            }, 1200 + idx * 1000);
+        });
+    } else {
+        const notifs = getUserNotifications(sessionUser.username);
+        const unread = notifs.filter(n => !n.read);
+        if (unread.length === 0) return;
+        markNotificationsRead(sessionUser.username);
+        unread.forEach((n, idx) => {
+            setTimeout(() => {
+                const type = n.type === 'одобрение' ? 'success' : 'error';
+                showNotification(n.message, type);
+            }, 1200 + idx * 1000);
+        });
+    }
 }
 
 /* ================================================================
