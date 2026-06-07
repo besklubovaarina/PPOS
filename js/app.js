@@ -49,7 +49,7 @@ async function _prefetchFromServer() {
     const statusMap = { 'открыто': 'open', 'закрыто': 'closed', 'завершено': 'completed' };
 
     const events = result.events.map(e => ({
-        id:                 e.id,
+        id:                 String(e.id),
         title:              e.title,
         description:        e.description        || '',
         date:               e.date               || '',
