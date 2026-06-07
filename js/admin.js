@@ -218,6 +218,9 @@ function adminEditUser(username) {
             </select>
         </div>` : '';
 
+    const titleEl2 = document.getElementById('description-modal-title');
+    if (titleEl2) titleEl2.textContent = 'Данные пользователя';
+
     document.getElementById('modal-description').innerHTML = `
         <div style="text-align:center;margin-bottom:20px;">
             <img src="${u.avatarDataUrl || 'images/default-avatar.png'}"
