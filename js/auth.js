@@ -90,7 +90,7 @@ async function handleLogin() {
 
     setCurrentUser(sessionUser);
     closeLoginDialog();
-    updateUIForAuth();
+    try { updateUIForAuth(); } catch(e) { console.error('updateUIForAuth:', e); }
     showNotification('Добро пожаловать, ' + sessionUser.fullName + '!', 'success');
 
     _showPendingNotifications(sessionUser);
