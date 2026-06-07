@@ -426,13 +426,13 @@ function renderEventApplicants(container, eventId) {
                     <span style="font-size:12px;font-weight:700;color:#065f46;width:44px;">Excel</span>
                     <button class="btn-export-excel" onclick="exportToExcel('${eventId}','all')">Все</button>
                     <button class="btn-export-excel" onclick="exportToExcel('${eventId}','approved')">Одобренные</button>
-                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','organizer')">Организаторы</button>
+                    ${event.allowOrganizerRole ? `<button class="btn-export-excel" onclick="exportToExcel('${eventId}','organizer')">Организаторы</button>` : ''}
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
                     <span style="font-size:12px;font-weight:700;color:#1e40af;width:44px;">Word</span>
                     <button class="btn-export-word"  onclick="exportToWord('${eventId}','all')">Все</button>
                     <button class="btn-export-word"  onclick="exportToWord('${eventId}','approved')">Одобренные</button>
-                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','organizer')">Организаторы</button>
+                    ${event.allowOrganizerRole ? `<button class="btn-export-word"  onclick="exportToWord('${eventId}','organizer')">Организаторы</button>` : ''}
                 </div>
             </div>
         </div>
