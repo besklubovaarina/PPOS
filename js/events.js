@@ -730,7 +730,7 @@ function toggleReminder(eventId) {
         showNotification('Напоминание убрано', 'warning');
     } else {
         user.reminders.push(eventId);
-        showNotification('Напоминание установлено — уведомим о регистрации', 'success');
+        showNotification('Напоминание установлено — напомним зарегистрироваться', 'success');
     }
 
     setCurrentUser(user);
