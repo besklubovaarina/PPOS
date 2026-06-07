@@ -421,13 +421,19 @@ function renderEventApplicants(container, eventId) {
                 ${reserve  > 0 ? `<span class="status-badge badge-reserve">${reserve} резерв</span>` : ''}
                 ${rejected > 0 ? `<span class="status-badge badge-rejected">${rejected} отклонено</span>` : ''}
             </div>
-            <div style="display:flex;gap:10px;margin-left:auto;">
-                <button class="btn-export-excel" onclick="exportToExcel('${eventId}')">
-                    Скачать Excel
-                </button>
-                <button class="btn-export-word"  onclick="exportToWord('${eventId}')">
-                    Скачать Word
-                </button>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;">
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <span style="font-size:12px;font-weight:700;color:#065f46;width:44px;">Excel</span>
+                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','all')">Все</button>
+                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','approved')">Одобренные</button>
+                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','organizer')">Организаторы</button>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <span style="font-size:12px;font-weight:700;color:#1e40af;width:44px;">Word</span>
+                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','all')">Все</button>
+                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','approved')">Одобренные</button>
+                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','organizer')">Организаторы</button>
+                </div>
             </div>
         </div>
 
@@ -879,7 +885,7 @@ function showGroupMembers(groupName) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h3 style="color:#033b7c;font-size:22px;font-weight:700;">Группа ${escapeHTML(groupName)}</h3>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:flex-start;">`;
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:20px;">`;
 
     members.forEach(m => {
         const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);
