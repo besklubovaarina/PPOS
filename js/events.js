@@ -778,9 +778,10 @@ let currentEditEventId = null; // null = режим добавления, стр
 /** Открывает форму для редактирования существующего мероприятия. */
 function openEditEventForm(eventId) {
     const events = getEventsFromStorage() || DEFAULT_EVENTS;
-    const event  = events.find(e => e.id === eventId);
+    const event  = events.find(e => String(e.id) === String(eventId));
     if (!event) return;
 
+    resetEventForm();
     currentEditEventId = eventId;
 
     document.getElementById('event-form-title').textContent       = 'Редактировать мероприятие';
@@ -915,7 +916,7 @@ function addEvent() {
     if (currentEditEventId) {
         // Режим редактирования
         const status = document.getElementById('new-event-status')?.value || 'open';
-        const idx = events.findIndex(e => e.id === currentEditEventId);
+        const idx = events.findIndex(e => String(e.id) === String(currentEditEventId));
         if (idx !== -1) {
             const evId = events[idx].id;
             // Сохраняем шаблоны в отдельные ключи localStorage
