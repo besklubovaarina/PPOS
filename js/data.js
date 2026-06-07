@@ -657,15 +657,16 @@ const DEFAULT_GROUP_MEMBERS_MAP = {
    ИНИЦИАЛИЗАЦИЯ — заполнение хранилища дефолтными данными
    ================================================================ */
 function initDefaultData() {
-    // Пользователи — только если совсем пусто
+    // Пользователи — добавляем недостающих из DEFAULT_USERS_LIST, не трогая существующих
     const existingUsers = getUsers();
-    if (Object.keys(existingUsers).length === 0) {
-        const usersMap = {};
-        DEFAULT_USERS_LIST.forEach(u => {
-            usersMap[u.username] = { ...u };
-        });
-        saveUsers(usersMap);
-    }
+    let usersChanged = false;
+    DEFAULT_USERS_LIST.forEach(u => {
+        if (!existingUsers[u.username]) {
+            existingUsers[u.username] = { ...u };
+            usersChanged = true;
+        }
+    });
+    if (usersChanged) saveUsers(existingUsers);
 
     // Мероприятия
     if (!getEventsFromStorage()) {
