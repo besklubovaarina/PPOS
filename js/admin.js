@@ -879,7 +879,7 @@ function showGroupMembers(groupName) {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
             <h3 style="color:#033b7c;font-size:22px;font-weight:700;">Группа ${escapeHTML(groupName)}</h3>
         </div>
-        <div class="grid-7">`;
+        <div style="display:flex;flex-wrap:wrap;gap:20px;justify-content:flex-start;">`;
 
     members.forEach(m => {
         const ud = Object.values(users).find(u => u.fullName === m.name || u.username === m.username);
@@ -900,6 +900,8 @@ function showGroupMembers(groupName) {
     document.getElementById('modal-description').innerHTML = html;
     const titleEl = document.getElementById('description-modal-title');
     if (titleEl) titleEl.textContent = 'Группа ' + groupName;
+    const mc = document.querySelector('#description-modal .modal-content');
+    if (mc) mc.classList.add('wide');
     document.getElementById('description-modal').style.display = 'flex';
 }
 

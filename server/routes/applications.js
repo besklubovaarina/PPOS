@@ -1,10 +1,10 @@
-// applications.js — Согласие_на_обработку_перс_данных_на_мероприятие
+// applications.js — Согласие_на_мероприятие
 // (заявки студентов на участие в мероприятиях)
 const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
-const TABLE = '"Согласие_на_обработку_перс_данных_на_мероприятие"';
+const TABLE = '"Согласие_на_мероприятие"';
 
 // Все заявки (для admin)
 router.get('/', async (req, res) => {

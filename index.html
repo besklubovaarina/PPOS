@@ -58,16 +58,6 @@
                     Написать председателю
                 </a>
             </div>
-            <p class="header-note">
-                Если не нашли ответ — напишите в сообщения группы ВКонтакте
-                или уточните у председателя профбюро вашего института.
-            </p>
-            <div class="chairman-info">
-                <p class="chairman-name">Бесклубова Арина Сергеевна</p>
-                <p class="chairman-title">
-                    Председатель профбюро студентов ИИТИФМО ППО студентов АлтГПУ
-                </p>
-            </div>
         </div>
 
         <!-- Мишка ППОС — mascot-bear.png нужно положить в папку images/ -->
@@ -498,6 +488,12 @@
 
         <div style="height:14px;"></div>
 
+        <label class="form-label" for="new-event-location">Место проведения</label>
+        <input type="text"
+               id="new-event-location"
+               class="form-input"
+               placeholder="например, Главный корпус, ауд. 333">
+
         <div class="form-row-3">
             <div>
                 <label class="form-label" for="new-event-type">Тип мероприятия</label>
@@ -705,6 +701,7 @@
 </div>
 
 
+<script src="js/api.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/data.js"></script>
 <script src="js/events.js"></script>

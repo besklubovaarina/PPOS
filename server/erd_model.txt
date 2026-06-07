@@ -55,13 +55,11 @@
 	Номер_протокола integer null
 	Протокол_от date null
 	Дата_написания date
-	Файл text null
 }
 
 Заявление_на_вступление {
 	id integer pk increments unique
 	Дата date
-	Файл text null
 	id_Студент(FK) integer > Студент.id
 }
 
@@ -78,15 +76,14 @@
 	Дата_рождения date null
 	Email varchar null
 	Спецификация_адреса varchar null
-	Аватар text null
 	Роль varchar
 	is_admin boolean
-	id_Группа(FK) integer null *> Группа.id
 	id_Данные_входа(FK) integer > Данные_входа.id
+	id_Группа(FK) integer null *> Группа.id
 	id_Улица(FK) integer null *> Улица.id
 	id_Заявление_в_бухгалтерию(FK) integer null > Заявление_в_бухгалтерию.id
 	id_Заявление_на_вступление(FK) integer null > Заявление_на_вступление.id
-	id_Согласие_на_обработку_перс_данных_на_мероприятие(FK) integer null > Согласие_на_обработку_перс_данных_на_мероприятие.id
+	id_Согласие_на_мероприятие(FK) integer null > Согласие_на_мероприятие.id
 }
 
 Список_должностей {
@@ -106,15 +103,18 @@
 	Место varchar null
 	Макс_участников integer
 	Статус varchar
-	Есть_сертификат boolean
 	Разрешить_организатора boolean
-	Изображение text null
-	Шаблон_сертификата_участника text null
-	Шаблон_сертификата_организатора text null
 	Дата_создания timestamp
 }
 
-Согласие_на_обработку_перс_данных_на_мероприятие {
+Сертификат {
+	id integer pk increments unique
+	Номер integer
+	Роль varchar
+	id_Мероприятие(FK) integer *> Мероприятие.id
+}
+
+Согласие_на_мероприятие {
 	id integer pk increments unique
 	Номер integer null
 	Дата date
@@ -145,8 +145,6 @@
 	Повестка_собрания text null
 	Число_присутствующих integer null
 	Результаты_голосования text null
-	Файл_название varchar null
-	Файл text null
 	Дата_загрузки timestamp
 	id_Аудитория(FK) integer null *> Аудитория.id
 }
@@ -174,21 +172,14 @@
 	id_Студент(FK) integer *> Студент.id
 }
 
-// Возможные значения поля Тип:
-// одобрение — заявка студента одобрена администратором
-// отклонение — заявка студента отклонена администратором
-// резерв — студент добавлен в резервный список
-
 Документы_для_скачивания {
 	id varchar pk unique
 	Название varchar
-	Файл text
 	Дата_добавления timestamp
 }
 
 Ожидающие_изменения_профиля {
 	id varchar pk unique
-	Тип varchar
 	Старое_ФИО varchar null
 	Новое_ФИО varchar null
 	Старая_группа varchar null
@@ -197,8 +188,6 @@
 	Новый_телефон varchar null
 	Старый_email varchar null
 	Новый_email varchar null
-	Старый_аватар text null
-	Новый_аватар text null
 	Статус varchar
 	Дата_создания timestamp
 	id_Студент(FK) integer *> Студент.id

@@ -281,6 +281,11 @@ function buildEventCardHTML(event, showCertificate = false) {
                                 <p class="event-meta-label">Время</p>
                                 <p class="event-meta-value">${escapeHTML(event.time)}</p>
                             </div>
+                            ${event.location ? `
+                            <div>
+                                <p class="event-meta-label">Место</p>
+                                <p class="event-meta-value">${escapeHTML(event.location)}</p>
+                            </div>` : ''}
                             ${admin ? `
                             <div>
                                 <p class="event-meta-label">Одобрено</p>
@@ -783,6 +788,7 @@ function openEditEventForm(eventId) {
     document.getElementById('new-event-title').value               = event.title       || '';
     document.getElementById('new-event-date').value                = event.date        || '';
     document.getElementById('new-event-time').value                = event.time        || '';
+    document.getElementById('new-event-location').value            = event.location    || '';
     document.getElementById('new-event-type').value                = event.type        || 'star';
     document.getElementById('new-event-max').value                 = event.maxParticipants || 0;
     document.getElementById('new-event-description').value         = event.description  || '';
@@ -881,6 +887,7 @@ function addEvent() {
     const title       = document.getElementById('new-event-title')?.value.trim();
     const date        = document.getElementById('new-event-date')?.value.trim();
     const time        = document.getElementById('new-event-time')?.value.trim();
+    const location    = document.getElementById('new-event-location')?.value.trim() || '';
     const type        = document.getElementById('new-event-type')?.value           || 'star';
     const desc        = document.getElementById('new-event-description')?.value.trim() || '';
     const max         = parseInt(document.getElementById('new-event-max')?.value)   || 0;
@@ -922,6 +929,7 @@ function addEvent() {
                 title,
                 date,
                 time,
+                location,
                 type,
                 description:     desc,
                 maxParticipants: max,
@@ -948,6 +956,7 @@ function addEvent() {
             title,
             date,
             time,
+            location,
             type,
             description:     desc,
             maxParticipants: max,
@@ -980,7 +989,7 @@ function resetEventForm() {
     currentEditEventId = null;
     adminFormFields    = [];
 
-    const ids = ['new-event-title', 'new-event-date', 'new-event-time',
+    const ids = ['new-event-title', 'new-event-date', 'new-event-time', 'new-event-location',
                  'new-event-description', 'new-event-max'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
 
@@ -1235,6 +1244,11 @@ function showEventDescription(eventId) {
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Время</p>
                 <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.time)}</p>
             </div>
+            ${event.location ? `
+            <div>
+                <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Место</p>
+                <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.location)}</p>
+            </div>` : ''}
             ${isAdmin() ? `
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Одобрено</p>
@@ -1267,6 +1281,8 @@ function showEventDescription(eventId) {
 
 function closeDescriptionModal() {
     document.getElementById('description-modal').style.display = 'none';
+    const mc = document.querySelector('#description-modal .modal-content');
+    if (mc) mc.classList.remove('wide');
 }
 
 /* ================================================================
