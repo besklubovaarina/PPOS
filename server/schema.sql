@@ -183,7 +183,7 @@ CREATE TABLE Протокол_собрания (
 CREATE TABLE Вопросы (
     id SERIAL PRIMARY KEY,
     Формулировка TEXT NOT NULL,
-    Решение TEXT NOT NULL,
+    Решение TEXT,
     Проголосовало_ЗА INT DEFAULT 0,
     Проголосовало_ПРОТИВ INT DEFAULT 0,
     Воздержались INT DEFAULT 0,
