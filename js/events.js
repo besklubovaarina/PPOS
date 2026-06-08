@@ -856,13 +856,23 @@ function openEditEventForm(eventId) {
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
 
-    // Сбрасываем и загружаем превью из отдельных ключей
+    // Сбрасываем и загружаем превью (сначала localStorage, потом API)
     _certImgData = { participant: null, organizer: null };
-    ['participant', 'organizer'].forEach(role => {
-        const stored = getCertTemplate(event.id, role);
+    ['participant', 'organizer'].forEach(async role => {
         const prev   = document.getElementById('cert-' + role + '-preview');
         const nameEl = document.getElementById('cert-' + role + '-name');
+        let stored = getCertTemplate(event.id, role);
+        if (!stored) {
+            try {
+                const r = await apiGetCertTemplate(event.id, role);
+                if (r.success && r.template) {
+                    stored = r.template;
+                    saveCertTemplate(event.id, role, stored);
+                }
+            } catch (_) {}
+        }
         if (stored) {
+            _certImgData[role] = stored;
             if (prev)   { prev.src = stored; prev.style.display = 'inline-block'; }
             if (nameEl) nameEl.textContent = 'Загружен';
         } else {
