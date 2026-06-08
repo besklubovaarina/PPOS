@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
                 id:                 e.id.toString(),
                 title:              e['Название'],
                 description:        e['Описание']           || '',
-                date:               e['Дата']               ? new Date(e['Дата']).toLocaleDateString('ru-RU') : '',
+                date:               e['Дата']               ? new Date(e['Дата']).toISOString().substring(0, 10) : '',
                 time:               e['Время']              ? e['Время'].substring(0, 5) : '',
                 type:               e['Тип']                || '',
                 location:           e['Место']              || '',

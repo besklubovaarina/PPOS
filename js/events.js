@@ -13,9 +13,20 @@ let adminEventAttachments    = [];
 
 function _parseDate(s) {
     if (!s) return 0;
-    const m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-    if (m) return new Date(+m[3], +m[2]-1, +m[1]).getTime();
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]).getTime();
+    // DD.MM.YYYY (legacy)
+    const ru = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (ru) return new Date(+ru[3], +ru[2]-1, +ru[1]).getTime();
     return 0;
+}
+
+function _formatDate(s) {
+    if (!s) return '';
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return iso[3] + '.' + iso[2] + '.' + iso[1];
+    return s; // уже в другом формате — вернуть как есть
 }
 
 /* ================================================================
@@ -275,7 +286,7 @@ function buildEventCardHTML(event, showCertificate = false) {
                         <div class="event-meta">
                             <div>
                                 <p class="event-meta-label">Дата</p>
-                                <p class="event-meta-value">${escapeHTML(event.date)}</p>
+                                <p class="event-meta-value">${escapeHTML(_formatDate(event.date))}</p>
                             </div>
                             <div>
                                 <p class="event-meta-label">Время</p>
@@ -418,7 +429,7 @@ function openRegistrationModal(eventId) {
     // Заголовок и мета-информация
     document.getElementById('reg-event-title').textContent = event.title;
     document.getElementById('reg-event-meta').innerHTML = `
-        <span class="reg-meta-item">Дата: ${escapeHTML(event.date)}</span>
+        <span class="reg-meta-item">Дата: ${escapeHTML(_formatDate(event.date))}</span>
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
 
@@ -1289,7 +1300,7 @@ function showEventDescription(eventId) {
         <div style="display:flex;gap:24px;margin-bottom:20px;flex-wrap:wrap;">
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Дата</p>
-                <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.date)}</p>
+                <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(_formatDate(event.date))}</p>
             </div>
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Время</p>
@@ -1396,7 +1407,7 @@ async function showCertificate(eventId) {
                     ${escapeHTML(user.fullName)}
                 </div>
                 <div class="cert-date-overlay" style="top:79%;font-size:16px;">
-                    ${escapeHTML(event.date)}
+                    ${escapeHTML(_formatDate(event.date))}
                 </div>
             </div>
         </div>

@@ -103,7 +103,7 @@ function renderMyEventsInProfile() {
             <div style="background:#f0f7ff;border-radius:16px;padding:20px;margin-bottom:14px;border:1px solid #bfdef3;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
                 <div style="flex:1;">
                     <p style="font-weight:700;color:#033b7c;font-size:17px;margin-bottom:6px;">${escapeHTML(event.title)}</p>
-                    <p style="color:#6b7280;font-size:14px;">${escapeHTML(event.date)} · ${escapeHTML(event.time)}</p>
+                    <p style="color:#6b7280;font-size:14px;">${escapeHTML(_formatDate(event.date))} · ${escapeHTML(event.time)}</p>
                     <div style="margin-top:8px;">${statusBadge}</div>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
