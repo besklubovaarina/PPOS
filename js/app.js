@@ -85,6 +85,15 @@ async function _prefetchFromServer() {
             groupNumber:     a.group_number      || '',
         }));
         saveApplications(apps);
+
+        // Синхронизируем enrolledEvents текущего пользователя с данными сервера
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            currentUser.enrolledEvents = apps
+                .filter(a => a.username === currentUser.username)
+                .map(a => a.eventId);
+            setCurrentUser(currentUser);
+        }
     }
 }
 
