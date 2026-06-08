@@ -1335,7 +1335,7 @@ function closeDescriptionModal() {
 /* ================================================================
    СЕРТИФИКАТ УЧАСТНИКА
    ================================================================ */
-function showCertificate(eventId) {
+async function showCertificate(eventId) {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -1356,9 +1356,28 @@ function showCertificate(eventId) {
     }
 
     const isOrganizer = myApp.applicationRole === 'organizer';
-    const certImage   = isOrganizer
+
+    // Сначала пробуем localStorage, затем API
+    let certImage = isOrganizer
         ? (getCertTemplate(event.id, 'organizer') || getCertTemplate(event.id, 'participant'))
         : getCertTemplate(event.id, 'participant');
+
+    if (!certImage) {
+        try {
+            const role = isOrganizer ? 'organizer' : 'participant';
+            const r = await apiGetCertTemplate(eventId, role);
+            if (r.success && r.template) {
+                certImage = r.template;
+                saveCertTemplate(eventId, role, certImage);
+            } else if (isOrganizer) {
+                const r2 = await apiGetCertTemplate(eventId, 'participant');
+                if (r2.success && r2.template) {
+                    certImage = r2.template;
+                    saveCertTemplate(eventId, 'participant', certImage);
+                }
+            }
+        } catch (_) {}
+    }
 
     if (!certImage) {
         showNotification('Шаблон сертификата ещё не загружен администратором', 'warning');
