@@ -50,7 +50,6 @@ async function _prefetchFromServer() {
     ]);
 
     if (evResult.success && evResult.events) {
-        const statusMap = { 'открыто': 'open', 'закрыто': 'closed', 'завершено': 'completed' };
         const events = evResult.events.map(e => ({
             id:                 String(e.id),
             title:              e.title,
@@ -60,7 +59,7 @@ async function _prefetchFromServer() {
             type:               e.type               || '',
             location:           e.location           || '',
             maxParticipants:    e.maxParticipants     || 0,
-            status:             statusMap[e.status]  || e.status || 'open',
+            status:             e.status || 'открыто',
             allowOrganizerRole: e.allowOrganizerRole || false,
             imageUrl:           e.imageUrl           || '',
             hasCertificate:     e.hasCertificate     || false,

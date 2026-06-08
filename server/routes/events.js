@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
                 type:               e['Тип']                || '',
                 location:           e['Место']              || '',
                 maxParticipants:    e['Макс_участников']    || 0,
-                status:             e['Статус']             || 'open',
+                status:             e['Статус']             || 'открыто',
                 allowOrganizerRole: e['Разрешить_организатора'],
                 imageUrl:           e['Изображение']        || '',
                 hasCertificate:     !!(certMap[e.id]?.length),
@@ -61,7 +61,7 @@ router.post('/', async (req, res) => {
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
              RETURNING id`,
             [title, description, date || null, time || null, type, location,
-             maxParticipants || 0, status || 'open',
+             maxParticipants || 0, status || 'открыто',
              allowOrganizerRole || false, imageUrl || null,
              requiresForm || false,
              formFields ? (typeof formFields === 'string' ? formFields : JSON.stringify(formFields)) : '[]']

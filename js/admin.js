@@ -344,8 +344,8 @@ function renderApplicationsOverview(container) {
                                     : ' · Без ограничений'}
                             </p>
                         </div>
-                        <span class="status-badge ${event.status === 'closed' ? 'badge-rejected' : 'badge-approved'}">
-                            ${event.status === 'closed' ? 'Закрыто' : 'Открыто'}
+                        <span class="status-badge ${event.status === 'завершено' ? 'badge-pending' : event.status === 'закрыто' ? 'badge-rejected' : 'badge-approved'}">
+                            ${event.status === 'завершено' ? 'Завершено' : event.status === 'закрыто' ? 'Закрыто' : 'Открыто'}
                         </span>
                     </div>
 
@@ -367,7 +367,7 @@ function renderApplicationsOverview(container) {
                         <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
                             Word
                         </button>
-                        ${event.status === 'open'
+                        ${event.status === 'открыто'
                             ? `<button class="btn-reserve" onclick="adminCloseEvent('${event.id}')">Завершить прием заявок</button>`
                             : `<button class="btn-enroll" style="background:#10b981;border-color:#10b981;" onclick="adminReopenEvent('${event.id}')">Возобновить прием заявок</button>`
                         }
@@ -667,11 +667,11 @@ function adminCloseEvent(eventId) {
     const idx    = events.findIndex(e => e.id === eventId);
     if (idx === -1) return;
 
-    events[idx].status = 'closed';
+    events[idx].status = 'закрыто';
     saveEventsToStorage(events);
 
     // Обновляем статус на сервере
-    apiUpdateEventStatus(eventId, 'closed');
+    apiUpdateEventStatus(eventId, 'закрыто');
 
     renderAdminPanel(currentAdminTab);
     showNotification('Прием заявок завершён', 'warning');
@@ -684,11 +684,11 @@ function adminReopenEvent(eventId) {
     const idx    = events.findIndex(e => e.id === eventId);
     if (idx === -1) return;
 
-    events[idx].status = 'open';
+    events[idx].status = 'открыто';
     saveEventsToStorage(events);
 
     // Обновляем статус на сервере
-    apiUpdateEventStatus(eventId, 'open');
+    apiUpdateEventStatus(eventId, 'открыто');
 
     renderAdminPanel(currentAdminTab);
     showNotification('Прием заявок возобновлён', 'success');

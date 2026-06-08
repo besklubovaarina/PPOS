@@ -275,7 +275,7 @@ async function migrate() {
                      ("Название","Описание","Дата","Время","Тип","Место",
                       "Макс_участников","Статус","Разрешить_организатора",
                       "Требует_форму","Поля_формы")
-                     VALUES ($1,$2,$3,$4,$5,$6,$7,'open',$8,$9,$10)`,
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,'открыто',$8,$9,$10)`,
                     [ev.title, ev.description, ev.date, ev.time, ev.type, '',
                      ev.maxParticipants, ev.allowOrganizerRole,
                      ev.requiresForm, ev.formFields]

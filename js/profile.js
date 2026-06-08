@@ -90,11 +90,11 @@ function renderMyEventsInProfile() {
                </span>`
             : '';
 
-        const canSeeCert = event.hasCertificate && event.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = event.hasCertificate && event.status === 'завершено' && myApp?.status === 'approved';
         const certBtn = canSeeCert
             ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
             : '';
-        const cancelBtn = event.status !== 'completed'
+        const cancelBtn = event.status !== 'завершено'
             ? `<button class="btn-cancel" style="padding:10px 18px;font-size:15px;border-radius:25px;"
                        onclick="cancelEnroll('${event.id}');closeProfileModal();">Отменить</button>`
             : '';

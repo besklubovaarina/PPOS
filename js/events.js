@@ -165,10 +165,10 @@ function getEventStatusBadge(event) {
     const max   = event.maxParticipants || 0;
     const admin = isAdmin();
 
-    if (event.status === 'completed') {
+    if (event.status === 'завершено') {
         return `<span class="event-status-badge closed">Завершено</span>`;
     }
-    if (event.status === 'closed') {
+    if (event.status === 'закрыто') {
         return `<span class="event-status-badge closed">Запись закрыта</span>`;
     }
     if (max > 0 && count >= max) {
@@ -221,7 +221,7 @@ function buildEventCardHTML(event, showCertificate = false) {
     } else if (loggedIn) {
         if (isEnrolled) {
             enrollBtn = `<button class="btn-enroll enrolled" onclick="cancelEnroll('${event.id}')">Отменить запись</button>`;
-        } else if (full || event.status === 'closed') {
+        } else if (full || event.status === 'закрыто') {
             enrollBtn = `<button class="btn-enroll" disabled>Нет мест</button>`;
         } else {
             enrollBtn = `<button class="btn-enroll" onclick="openRegistrationModal('${event.id}')">Записаться</button>`;
@@ -232,7 +232,7 @@ function buildEventCardHTML(event, showCertificate = false) {
 
     // ---- Кнопка «Напомнить» (только для незаписавшихся) ----
     let reminderBtn = '';
-    if (loggedIn && !admin && !isEnrolled && event.status !== 'closed') {
+    if (loggedIn && !admin && !isEnrolled && event.status !== 'закрыто') {
         const reminderClass = hasReminder ? 'event-reminder-btn active' : 'event-reminder-btn';
         const reminderTitle = hasReminder ? 'Убрать напоминание' : 'Напомнить о регистрации';
         reminderBtn = `<button class="${reminderClass}" title="${reminderTitle}"
@@ -795,7 +795,7 @@ function checkAndShowReminders() {
 
     const remind = user.reminders
         .map(id => events.find(e => e.id === id))
-        .filter(e => e && e.status !== 'closed' && !enrolled.includes(e.id));
+        .filter(e => e && e.status !== 'закрыто' && !enrolled.includes(e.id));
 
     if (remind.length === 0) return;
 
@@ -848,7 +848,7 @@ function openEditEventForm(eventId) {
     const statusSection = document.getElementById('event-status-section');
     if (statusSection) statusSection.style.display = 'block';
     const statusEl = document.getElementById('new-event-status');
-    if (statusEl) statusEl.value = event.status || 'open';
+    if (statusEl) statusEl.value = event.status || 'открыто';
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = !!event.hasCertificate;
@@ -964,7 +964,7 @@ async function addEvent() {
 
     if (currentEditEventId) {
         // Режим редактирования
-        const status = document.getElementById('new-event-status')?.value || 'open';
+        const status = document.getElementById('new-event-status')?.value || 'открыто';
         const idx = events.findIndex(e => String(e.id) === String(currentEditEventId));
         if (idx !== -1) {
             const evId = events[idx].id;
@@ -1009,7 +1009,7 @@ async function addEvent() {
         // Режим добавления — сначала сохраняем на сервере, получаем ID
         const serverResult = await apiCreateEvent({
             title, description: desc, date, time, type, location,
-            maxParticipants: max, status: 'open', allowOrganizerRole,
+            maxParticipants: max, status: 'открыто', allowOrganizerRole,
             requiresForm: needsForm,
             formFields: JSON.stringify(formFields),
             certParticipantData: _certImgData.participant || undefined,
@@ -1028,7 +1028,7 @@ async function addEvent() {
             reserveCount:    0,
             requiresForm:    needsForm,
             formFields,
-            status:          'open',
+            status:          'открыто',
             hasCertificate,
             allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
@@ -1081,7 +1081,7 @@ function resetEventForm() {
     const statusSection = document.getElementById('event-status-section');
     if (statusSection) statusSection.style.display = 'none';
     const statusEl = document.getElementById('new-event-status');
-    if (statusEl) statusEl.value = 'open';
+    if (statusEl) statusEl.value = 'открыто';
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = false;
@@ -1239,7 +1239,7 @@ function renderMyEventsSection() {
     const apps = getApplications();
     container.innerHTML = myEvents.map(e => {
         const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
-        const canSeeCert = e.hasCertificate && e.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = e.hasCertificate && e.status === 'завершено' && myApp?.status === 'approved';
         return buildEventCardHTML(e, canSeeCert);
     }).join('');
 }
@@ -1368,7 +1368,7 @@ async function showCertificate(eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
-    if (event.status !== 'completed') {
+    if (event.status !== 'завершено') {
         showNotification('Сертификат будет доступен после завершения мероприятия', 'warning');
         return;
     }
