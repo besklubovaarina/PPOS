@@ -100,7 +100,7 @@ function apiResolvePendingChange(id, action) {
 
 /* ── Сертификаты ─────────────────────────────────────────── */
 function apiGetCertTemplate(eventId, role) {
-    return apiFetch('GET', '/certificates/event/' + eventId + '/' + role);
+    return apiFetch('GET', '/certificates/event/' + eventId + '/' + encodeURIComponent(role));
 }
 
 function apiSaveCertTemplate(eventId, role, templateData) {

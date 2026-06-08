@@ -1382,10 +1382,11 @@ async function showCertificate(eventId) {
 
     const isOrganizer = myApp.applicationRole === 'organizer';
 
-    // Сначала пробуем localStorage, затем API
+    // Сначала пробуем localStorage (оба варианта ключа), затем API
     let certImage = isOrganizer
-        ? (getCertTemplate(event.id, 'organizer') || getCertTemplate(event.id, 'participant'))
-        : getCertTemplate(event.id, 'participant');
+        ? (getCertTemplate(event.id, 'организатор') || getCertTemplate(event.id, 'organizer')
+         || getCertTemplate(event.id, 'участник')   || getCertTemplate(event.id, 'participant'))
+        : (getCertTemplate(event.id, 'участник')    || getCertTemplate(event.id, 'participant'));
 
     if (!certImage) {
         try {
@@ -1401,7 +1402,11 @@ async function showCertificate(eventId) {
                     saveCertTemplate(eventId, 'участник', certImage);
                 }
             }
-        } catch (_) {}
+        } catch (err) {
+            console.error('Ошибка загрузки сертификата:', err);
+            showNotification('Ошибка при загрузке сертификата: ' + err.message, 'error');
+            return;
+        }
     }
 
     if (!certImage) {
