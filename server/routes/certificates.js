@@ -8,6 +8,9 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 
+const ROLE_MAP = { 'participant': 'участник', 'organizer': 'организатор' };
+function normalizeRole(r) { return ROLE_MAP[r] || r; }
+
 // Все шаблоны мероприятия
 router.get('/event/:id', async (req, res) => {
     try {
@@ -25,10 +28,11 @@ router.get('/event/:id', async (req, res) => {
 // Шаблон конкретной роли (возвращает base64)
 router.get('/event/:id/:role', async (req, res) => {
     try {
+        const role = normalizeRole(decodeURIComponent(req.params.role));
         const r = await pool.query(
             `SELECT "Шаблон" FROM "Сертификат"
              WHERE "id_Мероприятие"=$1 AND "Роль"=$2`,
-            [req.params.id, req.params.role]
+            [req.params.id, role]
         );
         if (r.rows.length === 0)
             return res.json({ success: false, error: 'Шаблон не найден' });
@@ -62,9 +66,10 @@ router.post('/', async (req, res) => {
 // Удалить шаблон
 router.delete('/event/:id/:role', async (req, res) => {
     try {
+        const role = normalizeRole(decodeURIComponent(req.params.role));
         await pool.query(
             `DELETE FROM "Сертификат" WHERE "id_Мероприятие"=$1 AND "Роль"=$2`,
-            [req.params.id, req.params.role]
+            [req.params.id, role]
         );
         res.json({ success: true });
     } catch (err) {
