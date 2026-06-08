@@ -354,7 +354,7 @@ function _renderDownloadableDocsSection(adminMode) {
                     <strong>${escapeHTML(d.name)}</strong>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <button onclick="downloadDocFromDB('${escapeHTML(d.id)}','${escapeHTML(d.name).replace(/'/g,'\\\'')}',event)"
+                    <button onclick="downloadServerDoc('${escapeHTML(d.id)}','${escapeHTML(d.name).replace(/'/g,'\\\'')}',event)"
                             style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);background:transparent;font-size:13px;font-weight:600;cursor:pointer;">
                         ↓ Скачать
                     </button>
@@ -488,25 +488,50 @@ function adminUploadDownloadableDoc(input) {
     if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
         const id = 'dloc_' + Date.now();
-        DocsDB.set(id, ev.target.result).then(() => {
+        try {
+            const r = await apiUploadDownloadableDoc({ id, name: file.name, fileData: ev.target.result });
+            if (!r.success) throw new Error(r.error || 'Ошибка сервера');
             const docs = getDownloadableDocs();
             docs.push({ id, name: file.name });
             saveDownloadableDocs(docs);
             renderDocumentPane();
             showNotification('Документ добавлен', 'success');
-        }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
+        } catch (err) {
+            showNotification('Ошибка при сохранении: ' + err.message, 'error');
+        }
     };
     reader.readAsDataURL(file);
 }
 
-function adminDeleteDownloadableDoc(id) {
+async function adminDeleteDownloadableDoc(id) {
     if (!confirm('Удалить документ?')) return;
-    DocsDB.remove(id).catch(() => {});
+    try {
+        await apiDeleteDownloadableDoc(id);
+    } catch (_) {}
     saveDownloadableDocs(getDownloadableDocs().filter(d => d.id !== id));
     renderDocumentPane();
     showNotification('Документ удалён', 'warning');
+}
+
+/* ================================================================
+   СКАЧИВАНИЕ ДОКУМЕНТА С СЕРВЕРА (для документов администратора)
+   ================================================================ */
+async function downloadServerDoc(id, name, e) {
+    if (e) e.preventDefault();
+    try {
+        const r = await apiGetDownloadableDocData(id);
+        if (!r.success || !r.data) { showNotification('Файл не найден на сервере', 'error'); return; }
+        const a = document.createElement('a');
+        a.href     = r.data;
+        a.download = r.name || name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch (err) {
+        showNotification('Ошибка при загрузке файла', 'error');
+    }
 }
 
 /* ================================================================

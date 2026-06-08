@@ -43,9 +43,10 @@ document.addEventListener('keydown', e => {
    ЗАГРУЗКА ДАННЫХ С СЕРВЕРА В localStorage
    ================================================================ */
 async function _prefetchFromServer() {
-    const [evResult, appResult] = await Promise.all([
+    const [evResult, appResult, docsResult] = await Promise.all([
         apiGetEvents(),
         apiGetAllApplications(),
+        apiGetDownloadableDocs(),
     ]);
 
     if (evResult.success && evResult.events) {
@@ -94,6 +95,14 @@ async function _prefetchFromServer() {
                 .map(a => a.eventId);
             setCurrentUser(currentUser);
         }
+    }
+
+    if (docsResult.success && docsResult.docs) {
+        const docs = docsResult.docs.map(d => ({
+            id:   String(d.id),
+            name: d['Название'] || d.name || '',
+        }));
+        saveDownloadableDocs(docs);
     }
 }
 

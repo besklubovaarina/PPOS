@@ -112,6 +112,10 @@ function apiGetDownloadableDocs() {
     return apiFetch('GET', '/documents/downloadable');
 }
 
+function apiGetDownloadableDocData(id) {
+    return apiFetch('GET', '/documents/downloadable/' + id + '/data');
+}
+
 function apiUploadDownloadableDoc(data) {
     return apiFetch('POST', '/documents/downloadable', data);
 }
