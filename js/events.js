@@ -858,21 +858,21 @@ function openEditEventForm(eventId) {
 
     // Сбрасываем и загружаем превью (сначала localStorage, потом API)
     _certImgData = { participant: null, organizer: null };
-    ['participant', 'organizer'].forEach(async role => {
-        const prev   = document.getElementById('cert-' + role + '-preview');
-        const nameEl = document.getElementById('cert-' + role + '-name');
-        let stored = getCertTemplate(event.id, role);
+    [['participant','участник'], ['organizer','организатор']].forEach(async ([uiRole, dbRole]) => {
+        const prev   = document.getElementById('cert-' + uiRole + '-preview');
+        const nameEl = document.getElementById('cert-' + uiRole + '-name');
+        let stored = getCertTemplate(event.id, dbRole) || getCertTemplate(event.id, uiRole);
         if (!stored) {
             try {
-                const r = await apiGetCertTemplate(event.id, role);
+                const r = await apiGetCertTemplate(event.id, dbRole);
                 if (r.success && r.template) {
                     stored = r.template;
-                    saveCertTemplate(event.id, role, stored);
+                    saveCertTemplate(event.id, dbRole, stored);
                 }
             } catch (_) {}
         }
         if (stored) {
-            _certImgData[role] = stored;
+            _certImgData[uiRole] = stored;
             if (prev)   { prev.src = stored; prev.style.display = 'inline-block'; }
             if (nameEl) nameEl.textContent = 'Загружен';
         } else {
@@ -1389,16 +1389,16 @@ async function showCertificate(eventId) {
 
     if (!certImage) {
         try {
-            const role = isOrganizer ? 'organizer' : 'participant';
-            const r = await apiGetCertTemplate(eventId, role);
+            const dbRole = isOrganizer ? 'организатор' : 'участник';
+            const r = await apiGetCertTemplate(eventId, dbRole);
             if (r.success && r.template) {
                 certImage = r.template;
-                saveCertTemplate(eventId, role, certImage);
+                saveCertTemplate(eventId, dbRole, certImage);
             } else if (isOrganizer) {
-                const r2 = await apiGetCertTemplate(eventId, 'participant');
+                const r2 = await apiGetCertTemplate(eventId, 'участник');
                 if (r2.success && r2.template) {
                     certImage = r2.template;
-                    saveCertTemplate(eventId, 'participant', certImage);
+                    saveCertTemplate(eventId, 'участник', certImage);
                 }
             }
         } catch (_) {}
