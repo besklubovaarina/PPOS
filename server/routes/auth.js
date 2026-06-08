@@ -10,7 +10,7 @@ router.post('/login', async (req, res) => {
 
         const result = await pool.query(
             `SELECT д.id as auth_id, д."Логин", д."Пароль",
-                    с.id as student_id, с."ФИО", с."Телефон", с."Email",
+                    с.id as student_id, с."ФИО", с."Телефон", с."email",
                     с."Аватар", с."Роль", с."is_admin",
                     г."Номер" as group_number,
                     и."Название" as institute
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
                 fullName:      row['ФИО']          || '',
                 groupNumber:   row['group_number'] || '',
                 phone:         row['Телефон']      || '',
-                email:         row['Email']        || '',
+                email:         row['email']        || '',
                 role:          row['Роль']         || 'Студент',
                 isAdmin:       row['is_admin'],
                 avatarDataUrl: row['Аватар']       || '',
