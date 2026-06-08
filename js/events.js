@@ -970,7 +970,7 @@ async function addEvent() {
             saveEventsToStorage(events);
 
             // Обновляем на сервере
-            apiUpdateEvent(evId, {
+            const updateResult = await apiUpdateEvent(evId, {
                 title, description: desc, date, time, type, location,
                 maxParticipants: max, status, allowOrganizerRole,
                 requiresForm: needsForm,
@@ -978,6 +978,10 @@ async function addEvent() {
                 certParticipantData: _certImgData.participant || undefined,
                 certOrganizerData:   _certImgData.organizer   || undefined,
             });
+            if (!updateResult.success && updateResult.error !== 'Нет соединения с сервером') {
+                showNotification('Ошибка сохранения на сервере: ' + (updateResult.error || ''), 'error');
+                return;
+            }
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
