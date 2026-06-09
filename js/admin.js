@@ -276,6 +276,18 @@ function adminSaveUserEdit(username) {
     if (roleEl && !u.isAdmin)     u.role        = roleEl.value;
 
     saveUsers(users);
+
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.username === username) {
+        if (fullName    !== undefined) currentUser.fullName    = fullName;
+        if (groupNumber !== undefined) currentUser.groupNumber = groupNumber;
+        if (phone       !== undefined) currentUser.phone       = phone;
+        if (email       !== undefined) currentUser.email       = email;
+        if (roleEl && !u.isAdmin)      currentUser.role        = roleEl.value;
+        setCurrentUser(currentUser);
+        updateUIForAuth();
+    }
+
     closeDescriptionModal();
     renderAdminPanel(currentAdminTab);
     showNotification(`Данные пользователя ${username} обновлены`, 'success');
