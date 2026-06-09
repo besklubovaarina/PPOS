@@ -43,8 +43,26 @@ function filterApplicantsByRole(role) {
 /* ================================================================
    ВКЛАДКА: ОЖИДАЮЩИЕ ИЗМЕНЕНИЯ ПРОФИЛЕЙ
    ================================================================ */
-function renderAdminChanges(container) {
-    const pending = getPendingChanges();
+async function renderAdminChanges(container) {
+    container.innerHTML = '<p style="color:#6b7280;">Загрузка...</p>';
+    const result = await apiGetPendingChanges();
+    const pending = result.success ? result.changes : [];
+
+    const normalize = c => ({
+        id:          c.id,
+        username:    c.username,
+        timestamp:   c['Дата_создания'] ? new Date(c['Дата_создания']).toLocaleString('ru-RU') : '',
+        oldFullName: c['Старое_ФИО'],
+        newFullName: c['Новое_ФИО'],
+        oldGroup:    c['Старая_группа'],
+        newGroup:    c['Новая_группа'],
+        oldPhone:    c['Старый_телефон'],
+        newPhone:    c['Новый_телефон'],
+        oldEmail:    c['Старый_email'],
+        newEmail:    c['Новый_email'],
+        oldAvatar:   c['Старый_аватар'],
+        newAvatar:   c['Новый_аватар'],
+    });
 
     let html = `<h3 style="color:#033b7c;margin-bottom:20px;font-size:22px;">
                     Ожидающие одобрения изменения (${pending.length})
@@ -59,23 +77,18 @@ function renderAdminChanges(container) {
     html += '<div class="pending-block">';
     html += '<h4>Требуют вашего решения</h4>';
 
-    pending.forEach(change => {
+    pending.map(normalize).forEach(change => {
         const rows = [];
-        if (change.oldFullName !== change.newFullName) {
+        if (change.oldFullName !== change.newFullName)
             rows.push(`ФИО: <em>${escapeHTML(change.oldFullName)}</em> → <strong>${escapeHTML(change.newFullName)}</strong>`);
-        }
-        if (change.oldGroup !== change.newGroup) {
+        if (change.oldGroup !== change.newGroup)
             rows.push(`Группа: <em>${escapeHTML(change.oldGroup || '—')}</em> → <strong>${escapeHTML(change.newGroup || '—')}</strong>`);
-        }
-        if (change.oldPhone !== change.newPhone) {
+        if (change.oldPhone !== change.newPhone)
             rows.push(`Телефон: <em>${escapeHTML(change.oldPhone || '—')}</em> → <strong>${escapeHTML(change.newPhone || '—')}</strong>`);
-        }
-        if (change.oldEmail !== change.newEmail) {
+        if (change.oldEmail !== change.newEmail)
             rows.push(`Email: <em>${escapeHTML(change.oldEmail || '—')}</em> → <strong>${escapeHTML(change.newEmail || '—')}</strong>`);
-        }
-        if (change.newAvatar && change.newAvatar !== change.oldAvatar) {
+        if (change.newAvatar && change.newAvatar !== change.oldAvatar)
             rows.push('<strong>Новый аватар загружен</strong>');
-        }
 
         const avatarPreview = change.newAvatar
             ? `<img src="${change.newAvatar}" alt="Новый аватар"
@@ -105,28 +118,15 @@ function renderAdminChanges(container) {
     container.innerHTML = html;
 }
 
-function approveChange(changeId) {
-    const pending = getPendingChanges();
-    const idx     = pending.findIndex(c => c.id === changeId);
-    if (idx === -1) return;
-
-    applyProfileChange(pending[idx]);
-    pending.splice(idx, 1);
-    savePendingChanges(pending);
-
+async function approveChange(changeId) {
+    await apiResolvePendingChange(changeId, 'approve');
     renderAdminPanel(currentAdminTab);
     showNotification('Изменения одобрены', 'success');
 }
 
-function rejectChange(changeId) {
+async function rejectChange(changeId) {
     if (!confirm('Отклонить изменения?')) return;
-    const pending = getPendingChanges();
-    const idx     = pending.findIndex(c => c.id === changeId);
-    if (idx === -1) return;
-
-    pending.splice(idx, 1);
-    savePendingChanges(pending);
-
+    await apiResolvePendingChange(changeId, 'reject');
     renderAdminPanel(currentAdminTab);
     showNotification('Изменения отклонены', 'warning');
 }

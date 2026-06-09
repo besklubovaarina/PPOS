@@ -586,16 +586,31 @@ function saveProfileChanges() {
         // Администратор применяет изменения немедленно
         applyProfileChange(change);
         showNotification('Профиль обновлён', 'success');
+        closeProfileModal();
+        updateUIForAuth();
     } else {
-        // Студент отправляет на одобрение
-        const pending = getPendingChanges();
-        pending.push(change);
-        savePendingChanges(pending);
-        showNotification('Изменения отправлены на одобрение администратору', 'success');
+        // Студент отправляет на одобрение через сервер
+        apiCreatePendingChange({
+            id:         change.id,
+            studentId:  user.studentId,
+            oldFullName: change.oldFullName,
+            newFullName: change.newFullName,
+            oldGroup:   change.oldGroup,
+            newGroup:   change.newGroup,
+            oldPhone:   change.oldPhone,
+            newPhone:   change.newPhone,
+            oldEmail:   change.oldEmail,
+            newEmail:   change.newEmail,
+            oldAvatar:  change.oldAvatar,
+            newAvatar:  isNewAvatar ? change.newAvatar : null,
+        }).then(() => {
+            showNotification('Изменения отправлены на одобрение администратору', 'success');
+        }).catch(() => {
+            showNotification('Ошибка отправки изменений', 'error');
+        });
+        closeProfileModal();
+        updateUIForAuth();
     }
-
-    closeProfileModal();
-    updateUIForAuth();
 }
 
 /* ================================================================
