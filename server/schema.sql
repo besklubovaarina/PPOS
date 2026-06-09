@@ -87,6 +87,8 @@ CREATE TABLE Мероприятие (
     Статус VARCHAR(20) DEFAULT 'открыто',
     Разрешить_организатора BOOLEAN DEFAULT FALSE,
     Изображение TEXT,
+    Требует_форму BOOLEAN DEFAULT FALSE,
+    Поля_формы TEXT,
     Дата_создания TIMESTAMP DEFAULT NOW()
 );
 
@@ -173,8 +175,6 @@ CREATE TABLE Протокол_собрания (
     Повестка_собрания TEXT,
     Число_присутствующих INT,
     Результаты_голосования TEXT,
-    Файл_название VARCHAR(255),
-    Файл TEXT,
     Дата_загрузки TIMESTAMP DEFAULT NOW(),
     id_Аудитория INT,
     FOREIGN KEY(id_Аудитория) REFERENCES Аудитория(id)

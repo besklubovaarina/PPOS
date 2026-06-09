@@ -7,7 +7,7 @@ const pool    = require('../db');
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query(
-            `SELECT с.id, д."Логин" as username, с."ФИО", с."Email",
+            `SELECT с.id, д."Логин" as username, с."ФИО", с."email",
                     с."Телефон", с."Роль", с."is_admin",
                     г."Номер" as group_number,
                     и."Название" as institute
@@ -48,7 +48,7 @@ router.put('/:username', async (req, res) => {
 
         await pool.query(
             `UPDATE "Студент" SET
-             "ФИО"=$1, "Телефон"=$2, "Email"=$3, "Аватар"=$4,
+             "ФИО"=$1, "Телефон"=$2, "email"=$3, "Аватар"=$4,
              "Пол"=$5, "Дата_рождения"=$6,
              "id_Группа"=$7, "id_Улица"=$8, "Спецификация_адреса"=$9
              WHERE id=$10`,
@@ -76,7 +76,7 @@ router.put('/:username', async (req, res) => {
                 fullName:      u['ФИО']          || '',
                 groupNumber:   u['group_number'] || '',
                 phone:         u['Телефон']      || '',
-                email:         u['Email']        || '',
+                email:         u['email']        || '',
                 role:          u['Роль']         || 'Студент',
                 isAdmin:       u['is_admin'],
                 avatarDataUrl: u['Аватар']       || '',
@@ -255,7 +255,7 @@ router.put('/pending-changes/:id/:action', async (req, res) => {
                 }
                 await pool.query(
                     `UPDATE "Студент" SET
-                     "ФИО"=$1,"Телефон"=$2,"Email"=$3,
+                     "ФИО"=$1,"Телефон"=$2,"email"=$3,
                      "Аватар"=COALESCE($4,"Аватар"),"id_Группа"=COALESCE($5,"id_Группа")
                      WHERE id=$6`,
                     [c['Новое_ФИО'], c['Новый_телефон'], c['Новый_email'],

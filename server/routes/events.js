@@ -9,7 +9,6 @@ router.get('/', async (req, res) => {
         const result = await pool.query(
             'SELECT * FROM "Мероприятие" ORDER BY "Дата_создания" DESC'
         );
-        // Для каждого мероприятия проверяем наличие сертификатов
         const certResult = await pool.query(
             'SELECT "id_Мероприятие","Роль" FROM "Сертификат"'
         );
@@ -19,21 +18,26 @@ router.get('/', async (req, res) => {
             certMap[c['id_Мероприятие']].push(c['Роль']);
         });
 
-        const events = result.rows.map(e => ({
-            id:                 e.id.toString(),
-            title:              e['Название'],
-            description:        e['Описание']       || '',
-            date:               e['Дата']            ? new Date(e['Дата']).toLocaleDateString('ru-RU') : '',
-            time:               e['Время']           ? e['Время'].substring(0,5) : '',
-            type:               e['Тип']             || '',
-            location:           e['Место']           || '',
-            maxParticipants:    e['Макс_участников'] || 0,
-            status:             e['Статус']          || 'open',
-            allowOrganizerRole: e['Разрешить_организатора'],
-            imageUrl:           e['Изображение']     || '',
-            // Есть сертификат = есть хотя бы один шаблон в таблице Сертификат
-            hasCertificate:     !!(certMap[e.id]?.length),
-        }));
+        const events = result.rows.map(e => {
+            let formFields = [];
+            try { formFields = JSON.parse(e['Поля_формы'] || '[]'); } catch (_) {}
+            return {
+                id:                 e.id.toString(),
+                title:              e['Название'],
+                description:        e['Описание']           || '',
+                date:               e['Дата']               ? new Date(e['Дата']).toISOString().substring(0, 10) : '',
+                time:               e['Время']              ? e['Время'].substring(0, 5) : '',
+                type:               e['Тип']                || '',
+                location:           e['Место']              || '',
+                maxParticipants:    e['Макс_участников']    || 0,
+                status:             e['Статус']             || 'открыто',
+                allowOrganizerRole: e['Разрешить_организатора'],
+                imageUrl:           e['Изображение']        || '',
+                hasCertificate:     !!(certMap[e.id]?.length),
+                requiresForm:       e['Требует_форму']      || false,
+                formFields,
+            };
+        });
         res.json({ success: true, events });
     } catch (err) {
         console.error(err);
@@ -46,22 +50,25 @@ router.post('/', async (req, res) => {
     try {
         const { title, description, date, time, type, location,
                 maxParticipants, status, allowOrganizerRole, imageUrl,
+                requiresForm, formFields,
                 certParticipantData, certOrganizerData } = req.body;
 
         const result = await pool.query(
             `INSERT INTO "Мероприятие"
              ("Название","Описание","Дата","Время","Тип","Место",
-              "Макс_участников","Статус","Разрешить_организатора","Изображение")
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+              "Макс_участников","Статус","Разрешить_организатора","Изображение",
+              "Требует_форму","Поля_формы")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
              RETURNING id`,
             [title, description, date || null, time || null, type, location,
-             maxParticipants || 0, status || 'open',
-             allowOrganizerRole || false, imageUrl || null]
+             maxParticipants || 0, status || 'открыто',
+             allowOrganizerRole || false, imageUrl || null,
+             requiresForm || false,
+             formFields ? (typeof formFields === 'string' ? formFields : JSON.stringify(formFields)) : '[]']
         );
 
         const eventId = result.rows[0].id;
 
-        // Сохраняем шаблоны сертификатов в отдельную таблицу
         if (certParticipantData) {
             await pool.query(
                 `INSERT INTO "Сертификат" ("Роль","Шаблон","id_Мероприятие")
@@ -86,25 +93,29 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Редактировать мероприятие
+// Редактировать мероприятие (полное обновление)
 router.put('/:id', async (req, res) => {
     try {
         const { title, description, date, time, type, location,
                 maxParticipants, status, allowOrganizerRole, imageUrl,
+                requiresForm, formFields,
                 certParticipantData, certOrganizerData } = req.body;
 
         await pool.query(
             `UPDATE "Мероприятие" SET
              "Название"=$1,"Описание"=$2,"Дата"=$3,"Время"=$4,"Тип"=$5,
              "Место"=$6,"Макс_участников"=$7,"Статус"=$8,
-             "Разрешить_организатора"=$9,"Изображение"=$10
-             WHERE id=$11`,
+             "Разрешить_организатора"=$9,"Изображение"=$10,
+             "Требует_форму"=$11,"Поля_формы"=$12
+             WHERE id=$13`,
             [title, description, date || null, time || null, type, location,
              maxParticipants, status, allowOrganizerRole,
-             imageUrl || null, req.params.id]
+             imageUrl || null,
+             requiresForm || false,
+             formFields ? (typeof formFields === 'string' ? formFields : JSON.stringify(formFields)) : '[]',
+             req.params.id]
         );
 
-        // Обновляем шаблоны сертификатов
         if (certParticipantData !== undefined) {
             if (certParticipantData) {
                 await pool.query(
@@ -136,6 +147,21 @@ router.put('/:id', async (req, res) => {
             }
         }
 
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.json({ success: false, error: 'Ошибка сервера' });
+    }
+});
+
+// Обновить только статус мероприятия
+router.patch('/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        await pool.query(
+            `UPDATE "Мероприятие" SET "Статус"=$1 WHERE id=$2`,
+            [status, req.params.id]
+        );
         res.json({ success: true });
     } catch (err) {
         console.error(err);

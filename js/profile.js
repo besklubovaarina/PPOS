@@ -90,11 +90,11 @@ function renderMyEventsInProfile() {
                </span>`
             : '';
 
-        const canSeeCert = event.hasCertificate && event.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = event.hasCertificate && event.status === 'завершено' && myApp?.status === 'approved';
         const certBtn = canSeeCert
             ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
             : '';
-        const cancelBtn = event.status !== 'completed'
+        const cancelBtn = event.status !== 'завершено'
             ? `<button class="btn-cancel" style="padding:10px 18px;font-size:15px;border-radius:25px;"
                        onclick="cancelEnroll('${event.id}');closeProfileModal();">Отменить</button>`
             : '';
@@ -103,7 +103,7 @@ function renderMyEventsInProfile() {
             <div style="background:#f0f7ff;border-radius:16px;padding:20px;margin-bottom:14px;border:1px solid #bfdef3;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
                 <div style="flex:1;">
                     <p style="font-weight:700;color:#033b7c;font-size:17px;margin-bottom:6px;">${escapeHTML(event.title)}</p>
-                    <p style="color:#6b7280;font-size:14px;">${escapeHTML(event.date)} · ${escapeHTML(event.time)}</p>
+                    <p style="color:#6b7280;font-size:14px;">${escapeHTML(_formatDate(event.date))} · ${escapeHTML(event.time)}</p>
                     <div style="margin-top:8px;">${statusBadge}</div>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -354,7 +354,7 @@ function _renderDownloadableDocsSection(adminMode) {
                     <strong>${escapeHTML(d.name)}</strong>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                    <button onclick="downloadDocFromDB('${escapeHTML(d.id)}','${escapeHTML(d.name).replace(/'/g,'\\\'')}',event)"
+                    <button onclick="downloadServerDoc('${escapeHTML(d.id)}','${escapeHTML(d.name).replace(/'/g,'\\\'')}',event)"
                             style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--blue-main);color:var(--blue-main);background:transparent;font-size:13px;font-weight:600;cursor:pointer;">
                         ↓ Скачать
                     </button>
@@ -488,25 +488,50 @@ function adminUploadDownloadableDoc(input) {
     if (file.size > MAX) { showNotification('Файл слишком большой. Максимум 50 МБ на один файл', 'error'); return; }
 
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
         const id = 'dloc_' + Date.now();
-        DocsDB.set(id, ev.target.result).then(() => {
+        try {
+            const r = await apiUploadDownloadableDoc({ id, name: file.name, fileData: ev.target.result });
+            if (!r.success) throw new Error(r.error || 'Ошибка сервера');
             const docs = getDownloadableDocs();
             docs.push({ id, name: file.name });
             saveDownloadableDocs(docs);
             renderDocumentPane();
             showNotification('Документ добавлен', 'success');
-        }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
+        } catch (err) {
+            showNotification('Ошибка при сохранении: ' + err.message, 'error');
+        }
     };
     reader.readAsDataURL(file);
 }
 
-function adminDeleteDownloadableDoc(id) {
+async function adminDeleteDownloadableDoc(id) {
     if (!confirm('Удалить документ?')) return;
-    DocsDB.remove(id).catch(() => {});
+    try {
+        await apiDeleteDownloadableDoc(id);
+    } catch (_) {}
     saveDownloadableDocs(getDownloadableDocs().filter(d => d.id !== id));
     renderDocumentPane();
     showNotification('Документ удалён', 'warning');
+}
+
+/* ================================================================
+   СКАЧИВАНИЕ ДОКУМЕНТА С СЕРВЕРА (для документов администратора)
+   ================================================================ */
+async function downloadServerDoc(id, name, e) {
+    if (e) e.preventDefault();
+    try {
+        const r = await apiGetDownloadableDocData(id);
+        if (!r.success || !r.data) { showNotification('Файл не найден на сервере', 'error'); return; }
+        const a = document.createElement('a');
+        a.href     = r.data;
+        a.download = r.name || name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } catch (err) {
+        showNotification('Ошибка при загрузке файла', 'error');
+    }
 }
 
 /* ================================================================

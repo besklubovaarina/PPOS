@@ -344,8 +344,8 @@ function renderApplicationsOverview(container) {
                                     : ' · Без ограничений'}
                             </p>
                         </div>
-                        <span class="status-badge ${event.status === 'closed' ? 'badge-rejected' : 'badge-approved'}">
-                            ${event.status === 'closed' ? 'Закрыто' : 'Открыто'}
+                        <span class="status-badge ${event.status === 'завершено' ? 'badge-pending' : event.status === 'закрыто' ? 'badge-rejected' : 'badge-approved'}">
+                            ${event.status === 'завершено' ? 'Завершено' : event.status === 'закрыто' ? 'Закрыто' : 'Открыто'}
                         </span>
                     </div>
 
@@ -367,7 +367,7 @@ function renderApplicationsOverview(container) {
                         <button class="btn-export-word"  onclick="exportToWord('${event.id}')">
                             Word
                         </button>
-                        ${event.status === 'open'
+                        ${event.status === 'открыто'
                             ? `<button class="btn-reserve" onclick="adminCloseEvent('${event.id}')">Завершить прием заявок</button>`
                             : `<button class="btn-enroll" style="background:#10b981;border-color:#10b981;" onclick="adminReopenEvent('${event.id}')">Возобновить прием заявок</button>`
                         }
@@ -579,7 +579,13 @@ function renderEventApplicants(container, eventId) {
    ДЕЙСТВИЯ С ЗАЯВКАМИ
    ================================================================ */
 
-function approveApplication(appId) {
+async function approveApplication(appId) {
+    const result = await apiUpdateApplication(appId, 'approve');
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка: ' + (result.error || 'не удалось одобрить'), 'error');
+        return;
+    }
+
     const apps  = getApplications();
     const app   = apps.find(a => a.id === appId);
     if (!app) return;
@@ -590,7 +596,6 @@ function approveApplication(appId) {
     app.status = 'approved';
     saveApplications(apps);
 
-    // Уведомление участнику
     addUserNotification(app.username, {
         type:       'одобрение',
         message:    `Ваша заявка на мероприятие «${event?.title || 'Мероприятие'}» одобрена!`,
@@ -601,21 +606,32 @@ function approveApplication(appId) {
     showNotification('Заявка одобрена', 'success');
 }
 
-function setReserveApplication(appId) {
+async function setReserveApplication(appId) {
+    const result = await apiUpdateApplication(appId, 'reserve');
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка: ' + (result.error || 'не удалось перевести в резерв'), 'error');
+        return;
+    }
+
     const apps = getApplications();
     const app  = apps.find(a => a.id === appId);
     if (!app) return;
 
     app.status = 'reserve';
     saveApplications(apps);
-    // Резервным НЕ отправляется уведомление до итоговых списков
 
     renderAdminPanel(currentAdminTab);
     showNotification('Участник переведён в резервный список', '');
 }
 
-function rejectApplication(appId) {
+async function rejectApplication(appId) {
     if (!confirm('Отклонить заявку? Участник получит уведомление об отказе.')) return;
+
+    const result = await apiUpdateApplication(appId, 'reject');
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка: ' + (result.error || 'не удалось отклонить'), 'error');
+        return;
+    }
 
     const apps  = getApplications();
     const app   = apps.find(a => a.id === appId);
@@ -627,7 +643,6 @@ function rejectApplication(appId) {
     app.status = 'rejected';
     saveApplications(apps);
 
-    // Убираем из enrolledEvents пользователя
     const users = getUsers();
     if (users[app.username]) {
         users[app.username].enrolledEvents =
@@ -635,7 +650,6 @@ function rejectApplication(appId) {
         saveUsers(users);
     }
 
-    // Уведомление участнику об отказе
     addUserNotification(app.username, {
         type:       'отклонение',
         message:    `К сожалению, ваша заявка на «${event?.title || 'Мероприятие'}» не прошла отбор.`,
@@ -653,8 +667,11 @@ function adminCloseEvent(eventId) {
     const idx    = events.findIndex(e => e.id === eventId);
     if (idx === -1) return;
 
-    events[idx].status = 'closed';
+    events[idx].status = 'закрыто';
     saveEventsToStorage(events);
+
+    // Обновляем статус на сервере
+    apiUpdateEventStatus(eventId, 'закрыто');
 
     renderAdminPanel(currentAdminTab);
     showNotification('Прием заявок завершён', 'warning');
@@ -667,8 +684,11 @@ function adminReopenEvent(eventId) {
     const idx    = events.findIndex(e => e.id === eventId);
     if (idx === -1) return;
 
-    events[idx].status = 'open';
+    events[idx].status = 'открыто';
     saveEventsToStorage(events);
+
+    // Обновляем статус на сервере
+    apiUpdateEventStatus(eventId, 'открыто');
 
     renderAdminPanel(currentAdminTab);
     showNotification('Прием заявок возобновлён', 'success');

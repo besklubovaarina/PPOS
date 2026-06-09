@@ -13,9 +13,20 @@ let adminEventAttachments    = [];
 
 function _parseDate(s) {
     if (!s) return 0;
-    const m = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-    if (m) return new Date(+m[3], +m[2]-1, +m[1]).getTime();
+    // YYYY-MM-DD
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return new Date(+iso[1], +iso[2]-1, +iso[3]).getTime();
+    // DD.MM.YYYY (legacy)
+    const ru = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (ru) return new Date(+ru[3], +ru[2]-1, +ru[1]).getTime();
     return 0;
+}
+
+function _formatDate(s) {
+    if (!s) return '';
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return iso[3] + '.' + iso[2] + '.' + iso[1];
+    return s; // уже в другом формате — вернуть как есть
 }
 
 /* ================================================================
@@ -154,10 +165,10 @@ function getEventStatusBadge(event) {
     const max   = event.maxParticipants || 0;
     const admin = isAdmin();
 
-    if (event.status === 'completed') {
+    if (event.status === 'завершено') {
         return `<span class="event-status-badge closed">Завершено</span>`;
     }
-    if (event.status === 'closed') {
+    if (event.status === 'закрыто') {
         return `<span class="event-status-badge closed">Запись закрыта</span>`;
     }
     if (max > 0 && count >= max) {
@@ -210,7 +221,7 @@ function buildEventCardHTML(event, showCertificate = false) {
     } else if (loggedIn) {
         if (isEnrolled) {
             enrollBtn = `<button class="btn-enroll enrolled" onclick="cancelEnroll('${event.id}')">Отменить запись</button>`;
-        } else if (full || event.status === 'closed') {
+        } else if (full || event.status === 'закрыто') {
             enrollBtn = `<button class="btn-enroll" disabled>Нет мест</button>`;
         } else {
             enrollBtn = `<button class="btn-enroll" onclick="openRegistrationModal('${event.id}')">Записаться</button>`;
@@ -221,7 +232,7 @@ function buildEventCardHTML(event, showCertificate = false) {
 
     // ---- Кнопка «Напомнить» (только для незаписавшихся) ----
     let reminderBtn = '';
-    if (loggedIn && !admin && !isEnrolled && event.status !== 'closed') {
+    if (loggedIn && !admin && !isEnrolled && event.status !== 'закрыто') {
         const reminderClass = hasReminder ? 'event-reminder-btn active' : 'event-reminder-btn';
         const reminderTitle = hasReminder ? 'Убрать напоминание' : 'Напомнить о регистрации';
         reminderBtn = `<button class="${reminderClass}" title="${reminderTitle}"
@@ -275,7 +286,7 @@ function buildEventCardHTML(event, showCertificate = false) {
                         <div class="event-meta">
                             <div>
                                 <p class="event-meta-label">Дата</p>
-                                <p class="event-meta-value">${escapeHTML(event.date)}</p>
+                                <p class="event-meta-value">${escapeHTML(_formatDate(event.date))}</p>
                             </div>
                             <div>
                                 <p class="event-meta-label">Время</p>
@@ -418,7 +429,7 @@ function openRegistrationModal(eventId) {
     // Заголовок и мета-информация
     document.getElementById('reg-event-title').textContent = event.title;
     document.getElementById('reg-event-meta').innerHTML = `
-        <span class="reg-meta-item">Дата: ${escapeHTML(event.date)}</span>
+        <span class="reg-meta-item">Дата: ${escapeHTML(_formatDate(event.date))}</span>
         <span class="reg-meta-item">Время: ${escapeHTML(event.time)}</span>
         ${max > 0 ? `<span class="reg-meta-item">Мест: ${max - count} из ${max}</span>` : ''}`;
 
@@ -634,7 +645,7 @@ function _showRegErrors(errors) {
 }
 
 /** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
-function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
+async function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
     // Повторная проверка лимита (за время читатели FileReader могли успеть)
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
@@ -642,6 +653,28 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
         showNotification('К сожалению, мест больше нет', 'error');
         closeRegistrationModal();
         return;
+    }
+
+    let appId = Date.now().toString();
+
+    // Отправляем заявку на сервер
+    if (user.studentId) {
+        const result = await apiCreateApplication({
+            eventId:   eventId,
+            studentId: user.studentId,
+            role:      appRole,
+        });
+        if (result.success) {
+            appId = String(result.id);
+        } else if (result.error === 'Вы уже подали заявку') {
+            showNotification('Вы уже подали заявку на это мероприятие', '');
+            closeRegistrationModal();
+            return;
+        } else if (result.error !== 'Нет соединения с сервером') {
+            showNotification(result.error || 'Ошибка при подаче заявки', 'error');
+            closeRegistrationModal();
+            return;
+        }
     }
 
     // Добавляем в список мероприятий пользователя
@@ -653,10 +686,10 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
         user.reminders = user.reminders.filter(id => id !== eventId);
     }
 
-    // Создаём заявку
+    // Создаём заявку в localStorage
     const apps = getApplications();
     apps.push({
-        id:              Date.now().toString(),
+        id:              appId,
         username:        user.username,
         fullName:        user.fullName,
         eventId,
@@ -686,14 +719,20 @@ function _finalizeRegistration(eventId, user, answers, event, appRole = 'partici
 /* ================================================================
    ОТМЕНА ЗАПИСИ (без формы — прямое действие)
    ================================================================ */
-function cancelEnroll(eventId) {
+async function cancelEnroll(eventId) {
     if (!isLoggedIn()) return;
     if (!confirm('Отменить запись на это мероприятие?')) return;
 
     const user = getCurrentUser();
+
+    // Отменяем на сервере
+    if (user.studentId) {
+        await apiDeleteApplication(eventId, user.studentId);
+    }
+
     user.enrolledEvents = (user.enrolledEvents || []).filter(id => id !== eventId);
 
-    // Удаляем все заявки студента на это мероприятие
+    // Удаляем заявку из localStorage
     let apps = getApplications();
     apps = apps.filter(a => !(a.eventId === eventId && a.username === user.username));
     saveApplications(apps);
@@ -756,7 +795,7 @@ function checkAndShowReminders() {
 
     const remind = user.reminders
         .map(id => events.find(e => e.id === id))
-        .filter(e => e && e.status !== 'closed' && !enrolled.includes(e.id));
+        .filter(e => e && e.status !== 'закрыто' && !enrolled.includes(e.id));
 
     if (remind.length === 0) return;
 
@@ -809,7 +848,7 @@ function openEditEventForm(eventId) {
     const statusSection = document.getElementById('event-status-section');
     if (statusSection) statusSection.style.display = 'block';
     const statusEl = document.getElementById('new-event-status');
-    if (statusEl) statusEl.value = event.status || 'open';
+    if (statusEl) statusEl.value = event.status || 'открыто';
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = !!event.hasCertificate;
@@ -817,13 +856,23 @@ function openEditEventForm(eventId) {
     const orgCb = document.getElementById('new-event-allow-organizer');
     if (orgCb) orgCb.checked = !!event.allowOrganizerRole;
 
-    // Сбрасываем и загружаем превью из отдельных ключей
+    // Сбрасываем и загружаем превью (сначала localStorage, потом API)
     _certImgData = { participant: null, organizer: null };
-    ['participant', 'organizer'].forEach(role => {
-        const stored = getCertTemplate(event.id, role);
-        const prev   = document.getElementById('cert-' + role + '-preview');
-        const nameEl = document.getElementById('cert-' + role + '-name');
+    [['participant','участник'], ['organizer','организатор']].forEach(async ([uiRole, dbRole]) => {
+        const prev   = document.getElementById('cert-' + uiRole + '-preview');
+        const nameEl = document.getElementById('cert-' + uiRole + '-name');
+        let stored = getCertTemplate(event.id, dbRole) || getCertTemplate(event.id, uiRole);
+        if (!stored) {
+            try {
+                const r = await apiGetCertTemplate(event.id, dbRole);
+                if (r.success && r.template) {
+                    stored = r.template;
+                    saveCertTemplate(event.id, dbRole, stored);
+                }
+            } catch (_) {}
+        }
         if (stored) {
+            _certImgData[uiRole] = stored;
             if (prev)   { prev.src = stored; prev.style.display = 'inline-block'; }
             if (nameEl) nameEl.textContent = 'Загружен';
         } else {
@@ -884,7 +933,7 @@ function handleCertFileSelect(input, role) {
 }
 
 /** Сохраняет новое или изменённое мероприятие. */
-function addEvent() {
+async function addEvent() {
     const title       = document.getElementById('new-event-title')?.value.trim();
     const date        = document.getElementById('new-event-date')?.value.trim();
     const time        = document.getElementById('new-event-time')?.value.trim();
@@ -915,23 +964,17 @@ function addEvent() {
 
     if (currentEditEventId) {
         // Режим редактирования
-        const status = document.getElementById('new-event-status')?.value || 'open';
+        const status = document.getElementById('new-event-status')?.value || 'открыто';
         const idx = events.findIndex(e => String(e.id) === String(currentEditEventId));
         if (idx !== -1) {
             const evId = events[idx].id;
-            // Сохраняем шаблоны в отдельные ключи localStorage
             if (_certImgData.participant) saveCertTemplate(evId, 'participant', _certImgData.participant);
             if (_certImgData.organizer)   saveCertTemplate(evId, 'organizer',   _certImgData.organizer);
-            // Если сертификаты отключены — удаляем шаблоны
             if (!hasCertificate) deleteCertTemplates(evId);
 
             events[idx] = {
                 ...events[idx],
-                title,
-                date,
-                time,
-                location,
-                type,
+                title, date, time, location, type,
                 description:     desc,
                 maxParticipants: max,
                 reserveCount:    events[idx].reserveCount || 0,
@@ -942,37 +985,59 @@ function addEvent() {
                 allowOrganizerRole,
                 attachments:     adminEventAttachments.map(f => ({ ...f })),
             };
-            // Убираем устаревшие inline-поля если они были
             delete events[idx].certificateParticipantImg;
             delete events[idx].certificateOrganizerImg;
+
+            saveEventsToStorage(events);
+
+            // Обновляем на сервере
+            const updateResult = await apiUpdateEvent(evId, {
+                title, description: desc, date, time, type, location,
+                maxParticipants: max, status, allowOrganizerRole,
+                requiresForm: needsForm,
+                formFields: JSON.stringify(formFields),
+                certParticipantData: _certImgData.participant || undefined,
+                certOrganizerData:   _certImgData.organizer   || undefined,
+            });
+            if (!updateResult.success && updateResult.error !== 'Нет соединения с сервером') {
+                showNotification('Ошибка сохранения на сервере: ' + (updateResult.error || ''), 'error');
+                return;
+            }
         }
         showNotification('Мероприятие обновлено', 'success');
     } else {
-        // Режим добавления
-        const newId = Date.now().toString();
+        // Режим добавления — сначала сохраняем на сервере, получаем ID
+        const serverResult = await apiCreateEvent({
+            title, description: desc, date, time, type, location,
+            maxParticipants: max, status: 'открыто', allowOrganizerRole,
+            requiresForm: needsForm,
+            formFields: JSON.stringify(formFields),
+            certParticipantData: _certImgData.participant || undefined,
+            certOrganizerData:   _certImgData.organizer   || undefined,
+        });
+
+        const newId = serverResult.success ? String(serverResult.id) : Date.now().toString();
+
         if (_certImgData.participant) saveCertTemplate(newId, 'participant', _certImgData.participant);
         if (_certImgData.organizer)   saveCertTemplate(newId, 'organizer',   _certImgData.organizer);
         events.push({
             id:              newId,
-            title,
-            date,
-            time,
-            location,
-            type,
+            title, date, time, location, type,
             description:     desc,
             maxParticipants: max,
             reserveCount:    0,
             requiresForm:    needsForm,
             formFields,
-            status:          'open',
+            status:          'открыто',
             hasCertificate,
             allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
         });
+
+        saveEventsToStorage(events);
         showNotification('Мероприятие добавлено', 'success');
     }
 
-    saveEventsToStorage(events);
     cancelAddEvent();
     renderAllEvents();
 }
@@ -1016,7 +1081,7 @@ function resetEventForm() {
     const statusSection = document.getElementById('event-status-section');
     if (statusSection) statusSection.style.display = 'none';
     const statusEl = document.getElementById('new-event-status');
-    if (statusEl) statusEl.value = 'open';
+    if (statusEl) statusEl.value = 'открыто';
 
     const certCb = document.getElementById('new-event-has-certificate');
     if (certCb) certCb.checked = false;
@@ -1174,7 +1239,7 @@ function renderMyEventsSection() {
     const apps = getApplications();
     container.innerHTML = myEvents.map(e => {
         const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
-        const canSeeCert = e.hasCertificate && e.status === 'completed' && myApp?.status === 'approved';
+        const canSeeCert = e.hasCertificate && e.status === 'завершено' && myApp?.status === 'approved';
         return buildEventCardHTML(e, canSeeCert);
     }).join('');
 }
@@ -1182,8 +1247,14 @@ function renderMyEventsSection() {
 /* ================================================================
    УДАЛЕНИЕ МЕРОПРИЯТИЯ
    ================================================================ */
-function confirmDeleteEvent(eventId) {
+async function confirmDeleteEvent(eventId) {
     if (!confirm('Удалить это мероприятие? Все связанные заявки также будут удалены.')) return;
+
+    const result = await apiDeleteEvent(eventId);
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка при удалении: ' + (result.error || ''), 'error');
+        return;
+    }
 
     let events = getEventsFromStorage() || [];
     events = events.filter(e => e.id !== eventId);
@@ -1239,7 +1310,7 @@ function showEventDescription(eventId) {
         <div style="display:flex;gap:24px;margin-bottom:20px;flex-wrap:wrap;">
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Дата</p>
-                <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(event.date)}</p>
+                <p style="font-size:18px;color:#163a6f;font-weight:600;">${escapeHTML(_formatDate(event.date))}</p>
             </div>
             <div>
                 <p style="font-size:13px;font-weight:600;color:#6b7280;text-transform:uppercase;">Время</p>
@@ -1289,7 +1360,7 @@ function closeDescriptionModal() {
 /* ================================================================
    СЕРТИФИКАТ УЧАСТНИКА
    ================================================================ */
-function showCertificate(eventId) {
+async function showCertificate(eventId) {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -1297,7 +1368,7 @@ function showCertificate(eventId) {
     const event  = events.find(e => e.id === eventId);
     if (!event) return;
 
-    if (event.status !== 'completed') {
+    if (event.status !== 'завершено') {
         showNotification('Сертификат будет доступен после завершения мероприятия', 'warning');
         return;
     }
@@ -1310,9 +1381,33 @@ function showCertificate(eventId) {
     }
 
     const isOrganizer = myApp.applicationRole === 'organizer';
-    const certImage   = isOrganizer
-        ? (getCertTemplate(event.id, 'organizer') || getCertTemplate(event.id, 'participant'))
-        : getCertTemplate(event.id, 'participant');
+
+    // Сначала пробуем localStorage (оба варианта ключа), затем API
+    let certImage = isOrganizer
+        ? (getCertTemplate(event.id, 'организатор') || getCertTemplate(event.id, 'organizer')
+         || getCertTemplate(event.id, 'участник')   || getCertTemplate(event.id, 'participant'))
+        : (getCertTemplate(event.id, 'участник')    || getCertTemplate(event.id, 'participant'));
+
+    if (!certImage) {
+        try {
+            const dbRole = isOrganizer ? 'организатор' : 'участник';
+            const r = await apiGetCertTemplate(eventId, dbRole);
+            if (r.success && r.template) {
+                certImage = r.template;
+                saveCertTemplate(eventId, dbRole, certImage);
+            } else if (isOrganizer) {
+                const r2 = await apiGetCertTemplate(eventId, 'участник');
+                if (r2.success && r2.template) {
+                    certImage = r2.template;
+                    saveCertTemplate(eventId, 'участник', certImage);
+                }
+            }
+        } catch (err) {
+            console.error('Ошибка загрузки сертификата:', err);
+            showNotification('Ошибка при загрузке сертификата: ' + err.message, 'error');
+            return;
+        }
+    }
 
     if (!certImage) {
         showNotification('Шаблон сертификата ещё не загружен администратором', 'warning');
@@ -1327,7 +1422,7 @@ function showCertificate(eventId) {
                     ${escapeHTML(user.fullName)}
                 </div>
                 <div class="cert-date-overlay" style="top:79%;font-size:16px;">
-                    ${escapeHTML(event.date)}
+                    ${escapeHTML(_formatDate(event.date))}
                 </div>
             </div>
         </div>

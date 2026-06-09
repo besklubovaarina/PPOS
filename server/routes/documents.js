@@ -112,7 +112,7 @@ router.get('/protocols', async (req, res) => {
     try {
         const r = await pool.query(
             `SELECT п.id, п."Номер_протокола", п."Дата",
-                    п."Повестка_собрания", п."Файл_название",
+                    п."Повестка_собрания",
                     п."Дата_загрузки",
                     а."Название" as auditorium,
                     к."Название" as building
@@ -125,25 +125,14 @@ router.get('/protocols', async (req, res) => {
     } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
 });
 
-router.get('/protocols/:id/data', async (req, res) => {
-    try {
-        const r = await pool.query(
-            'SELECT "Файл_название","Файл" FROM "Протокол_собрания" WHERE id=$1', [req.params.id]
-        );
-        if (r.rows.length === 0) return res.json({ success: false, error: 'Файл не найден' });
-        res.json({ success: true, name: r.rows[0]['Файл_название'], data: r.rows[0]['Файл'] });
-    } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
-});
-
 router.post('/protocols', async (req, res) => {
     try {
-        const { number, date, agenda, presentCount, fileName, fileData } = req.body;
+        const { number, date, agenda, presentCount } = req.body;
         const r = await pool.query(
             `INSERT INTO "Протокол_собрания"
-             ("Номер_протокола","Дата","Повестка_собрания",
-              "Число_присутствующих","Файл_название","Файл")
-             VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-            [number, date || null, agenda, presentCount || 0, fileName, fileData]
+             ("Номер_протокола","Дата","Повестка_собрания","Число_присутствующих")
+             VALUES ($1,$2,$3,$4) RETURNING id`,
+            [number, date || null, agenda, presentCount || 0]
         );
         res.json({ success: true, id: r.rows[0].id });
     } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }

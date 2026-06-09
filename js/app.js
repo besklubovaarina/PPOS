@@ -43,30 +43,66 @@ document.addEventListener('keydown', e => {
    ЗАГРУЗКА ДАННЫХ С СЕРВЕРА В localStorage
    ================================================================ */
 async function _prefetchFromServer() {
-    const result = await apiGetEvents();
-    if (!result.success || !result.events) return;
+    const [evResult, appResult, docsResult] = await Promise.all([
+        apiGetEvents(),
+        apiGetAllApplications(),
+        apiGetDownloadableDocs(),
+    ]);
 
-    const statusMap = { 'открыто': 'open', 'закрыто': 'closed', 'завершено': 'completed' };
+    if (evResult.success && evResult.events) {
+        const events = evResult.events.map(e => ({
+            id:                 String(e.id),
+            title:              e.title,
+            description:        e.description        || '',
+            date:               e.date               || '',
+            time:               e.time               || '',
+            type:               e.type               || '',
+            location:           e.location           || '',
+            maxParticipants:    e.maxParticipants     || 0,
+            status:             e.status || 'открыто',
+            allowOrganizerRole: e.allowOrganizerRole || false,
+            imageUrl:           e.imageUrl           || '',
+            hasCertificate:     e.hasCertificate     || false,
+            reserveCount:       0,
+            requiresForm:       e.requiresForm       || false,
+            formFields:         Array.isArray(e.formFields) ? e.formFields : [],
+        }));
+        saveEventsToStorage(events);
+    }
 
-    const events = result.events.map(e => ({
-        id:                 String(e.id),
-        title:              e.title,
-        description:        e.description        || '',
-        date:               e.date               || '',
-        time:               e.time               || '',
-        type:               e.type               || '',
-        location:           e.location           || '',
-        maxParticipants:    e.maxParticipants     || 0,
-        status:             statusMap[e.status]  || e.status || 'open',
-        allowOrganizerRole: e.allowOrganizerRole || false,
-        imageUrl:           e.imageUrl           || '',
-        hasCertificate:     e.hasCertificate     || false,
-        reserveCount:       0,
-        requiresForm:       false,
-        formFields:         [],
-    }));
+    if (appResult.success && appResult.applications) {
+        const apps = appResult.applications.map(a => ({
+            id:              String(a.id),
+            username:        a.username  || '',
+            fullName:        a.full_name || '',
+            eventId:         String(a.event_id),
+            date:            a['Дата'] ? new Date(a['Дата']).toLocaleDateString('ru-RU') : '',
+            timestamp:       a['Дата'] || '',
+            status:          a['Статус']         || 'pending',
+            consentGiven:    true,
+            answers:         {},
+            applicationRole: a['Роль_участника'] || 'participant',
+            groupNumber:     a.group_number      || '',
+        }));
+        saveApplications(apps);
 
-    saveEventsToStorage(events);
+        // Синхронизируем enrolledEvents текущего пользователя с данными сервера
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            currentUser.enrolledEvents = apps
+                .filter(a => a.username === currentUser.username)
+                .map(a => a.eventId);
+            setCurrentUser(currentUser);
+        }
+    }
+
+    if (docsResult.success && docsResult.docs) {
+        const docs = docsResult.docs.map(d => ({
+            id:   String(d.id),
+            name: d['Название'] || d.name || '',
+        }));
+        saveDownloadableDocs(docs);
+    }
 }
 
 /* ================================================================

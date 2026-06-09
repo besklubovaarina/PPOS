@@ -2,7 +2,7 @@
  * api.js — Все запросы к серверу (http://localhost:3000/api)
  */
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = '/api';
 
 async function apiFetch(method, path, body) {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -44,7 +44,7 @@ function apiDeleteEvent(id) {
 
 /* ── Заявки на мероприятия ───────────────────────────────── */
 function apiGetApplications(studentId) {
-    return apiFetch('GET', '/applications/' + studentId);
+    return apiFetch('GET', '/applications/student/' + studentId);
 }
 
 function apiGetAllApplications() {
@@ -57,6 +57,14 @@ function apiCreateApplication(data) {
 
 function apiUpdateApplication(id, action) {
     return apiFetch('PUT', '/applications/' + id + '/' + action);
+}
+
+function apiDeleteApplication(eventId, studentId) {
+    return apiFetch('DELETE', '/applications/event/' + eventId + '/student/' + studentId);
+}
+
+function apiUpdateEventStatus(id, status) {
+    return apiFetch('PATCH', '/events/' + id + '/status', { status });
 }
 
 /* ── Пользователи ────────────────────────────────────────── */
@@ -92,7 +100,7 @@ function apiResolvePendingChange(id, action) {
 
 /* ── Сертификаты ─────────────────────────────────────────── */
 function apiGetCertTemplate(eventId, role) {
-    return apiFetch('GET', '/certificates/event/' + eventId + '/' + role);
+    return apiFetch('GET', '/certificates/event/' + eventId + '/' + encodeURIComponent(role));
 }
 
 function apiSaveCertTemplate(eventId, role, templateData) {
@@ -102,6 +110,10 @@ function apiSaveCertTemplate(eventId, role, templateData) {
 /* ── Документы для скачивания ────────────────────────────── */
 function apiGetDownloadableDocs() {
     return apiFetch('GET', '/documents/downloadable');
+}
+
+function apiGetDownloadableDocData(id) {
+    return apiFetch('GET', '/documents/downloadable/' + id + '/data');
 }
 
 function apiUploadDownloadableDoc(data) {
