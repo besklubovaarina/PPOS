@@ -502,6 +502,8 @@ const DEFAULT_USERS_LIST = [
     { username:'hobor',         password:'hobor2025',         isAdmin:false, fullName:'Хобор Олеся Юрьевна',                   groupNumber:'3522д', role:'Студент',           phone:'', email:'', avatarDataUrl:'', enrolledEvents:[], documents:{} },
     { username:'shmarova',      password:'shmarova2025',      isAdmin:false, fullName:'Шмарова Светлана Евгеньевна',           groupNumber:'3522д', role:'Студент',           phone:'', email:'', avatarDataUrl:'', enrolledEvents:[], documents:{} },
     { username:'shuyskaya',     password:'shuyskaya2025',     isAdmin:false, fullName:'Шуйская Алиса Антоновна',               groupNumber:'3522д', role:'Студент',           phone:'', email:'', avatarDataUrl:'', enrolledEvents:[], documents:{} },
+    // --- 2125д ---
+    { username:'pivneva',       password:'pivneva2025',       isAdmin:false, fullName:'Пивнева Светлана Андреевна',            groupNumber:'2125д', role:'Председатель',      phone:'', email:'', avatarDataUrl:'', enrolledEvents:[], documents:{} },
 ];
 
 /* ================================================================
@@ -650,6 +652,9 @@ const DEFAULT_GROUP_MEMBERS_MAP = {
         { id: 'g6_20', name: 'Хобор Олеся Юрьевна',                   username: 'hobor'          },
         { id: 'g6_21', name: 'Шмарова Светлана Евгеньевна',           username: 'shmarova'       },
         { id: 'g6_22', name: 'Шуйская Алиса Антоновна',               username: 'shuyskaya'      },
+    ],
+    '2125д': [
+        { id: 'g7_1',  name: 'Пивнева Светлана Андреевна',            username: 'pivneva'        },
     ],
 };
 
