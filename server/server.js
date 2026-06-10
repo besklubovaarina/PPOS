@@ -38,4 +38,12 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Сервер запущен: http://localhost:${PORT}`);
     console.log(`📋 Проверка: http://localhost:${PORT}/api/health`);
+
+    // Самопинг каждые 14 минут чтобы сервер не засыпал на Render.com
+    const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+    setInterval(() => {
+        fetch(`${SELF_URL}/api/health`)
+            .then(() => console.log('Keep-alive ping OK'))
+            .catch(err => console.error('Keep-alive ping failed:', err.message));
+    }, 14 * 60 * 1000);
 });
