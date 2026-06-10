@@ -132,7 +132,7 @@ router.post('/protocols', async (req, res) => {
             `INSERT INTO "Протокол_собрания"
              ("Номер_протокола","Дата","Повестка_собрания","Число_присутствующих")
              VALUES ($1,$2,$3,$4) RETURNING id`,
-            [number, date || null, agenda, presentCount || 0]
+            [number, date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null, agenda, presentCount || 0]
         );
         res.json({ success: true, id: r.rows[0].id });
     } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
