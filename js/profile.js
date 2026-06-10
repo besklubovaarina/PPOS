@@ -85,12 +85,12 @@ function renderMyEventsInProfile() {
     const html = myEvents.map(event => {
         const myApp = apps.find(a => a.eventId === event.id && a.username === user.username);
         const statusBadge = myApp
-            ? `<span class="status-badge badge-${myApp.status === 'approved' ? 'approved' : myApp.status === 'rejected' ? 'rejected' : 'pending'}">
-                ${myApp.status === 'approved' ? 'Одобрено' : myApp.status === 'rejected' ? 'Отклонено' : 'Ожидает'}
+            ? `<span class="status-badge badge-${myApp.status === 'одобрено' ? 'approved' : myApp.status === 'отклонено' ? 'rejected' : 'pending'}">
+                ${myApp.status === 'одобрено' ? 'Одобрено' : myApp.status === 'отклонено' ? 'Отклонено' : 'Ожидает'}
                </span>`
             : '';
 
-        const canSeeCert = event.hasCertificate && event.status === 'завершено' && myApp?.status === 'approved';
+        const canSeeCert = event.hasCertificate && event.status === 'завершено' && myApp?.status === 'одобрено';
         const certBtn = canSeeCert
             ? `<button class="btn-certificate" onclick="showCertificate('${event.id}')">Сертификат</button>`
             : '';
@@ -569,7 +569,7 @@ function saveProfileChanges() {
         id:          Date.now().toString(),
         username:    user.username,
         timestamp:   new Date().toLocaleString('ru-RU'),
-        status:      'pending',
+        status:      'ожидание',
         oldFullName: user.fullName,
         newFullName,
         oldGroup:    user.groupNumber,

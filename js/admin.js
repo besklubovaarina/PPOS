@@ -327,10 +327,10 @@ function renderApplicationsOverview(container) {
     } else {
         events.forEach(event => {
             const eventApps = apps.filter(a => a.eventId === event.id);
-            const pending   = eventApps.filter(a => a.status === 'pending').length;
-            const approved  = eventApps.filter(a => a.status === 'approved').length;
-            const reserve   = eventApps.filter(a => a.status === 'reserve').length;
-            const rejected  = eventApps.filter(a => a.status === 'rejected').length;
+            const pending   = eventApps.filter(a => a.status === 'ожидание').length;
+            const approved  = eventApps.filter(a => a.status === 'одобрено').length;
+            const reserve   = eventApps.filter(a => a.status === 'резерв').length;
+            const rejected  = eventApps.filter(a => a.status === 'отклонено').length;
 
             html += `
                 <div class="event-app-card">
@@ -391,14 +391,14 @@ function renderEventApplicants(container, eventId) {
     const allApps = getApplications().filter(a => a.eventId === eventId);
     const users   = getUsers();
 
-    const pending  = allApps.filter(a => a.status === 'pending').length;
-    const approved = allApps.filter(a => a.status === 'approved').length;
-    const reserve  = allApps.filter(a => a.status === 'reserve').length;
-    const rejected = allApps.filter(a => a.status === 'rejected').length;
+    const pending  = allApps.filter(a => a.status === 'ожидание').length;
+    const approved = allApps.filter(a => a.status === 'одобрено').length;
+    const reserve  = allApps.filter(a => a.status === 'резерв').length;
+    const rejected = allApps.filter(a => a.status === 'отклонено').length;
 
     // Применяем фильтр по роли
     const apps = (event.allowOrganizerRole && currentRoleFilter !== 'all')
-        ? allApps.filter(a => (a.applicationRole || 'participant') === currentRoleFilter)
+        ? allApps.filter(a => (a.applicationRole || 'участник') === currentRoleFilter)
         : allApps;
 
     // Текстовые поля формы (для столбцов таблицы)
@@ -428,14 +428,14 @@ function renderEventApplicants(container, eventId) {
                 <div style="display:flex;gap:6px;align-items:center;">
                     <span style="font-size:12px;font-weight:700;color:#065f46;width:44px;">Excel</span>
                     <button class="btn-export-excel" onclick="exportToExcel('${eventId}','all')">Все</button>
-                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','approved')">Одобренные</button>
-                    ${event.allowOrganizerRole ? `<button class="btn-export-excel" onclick="exportToExcel('${eventId}','organizer')">Организаторы</button>` : ''}
+                    <button class="btn-export-excel" onclick="exportToExcel('${eventId}','одобрено')">Одобренные</button>
+                    ${event.allowOrganizerRole ? `<button class="btn-export-excel" onclick="exportToExcel('${eventId}','организатор')">Организаторы</button>` : ''}
                 </div>
                 <div style="display:flex;gap:6px;align-items:center;">
                     <span style="font-size:12px;font-weight:700;color:#1e40af;width:44px;">Word</span>
                     <button class="btn-export-word"  onclick="exportToWord('${eventId}','all')">Все</button>
-                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','approved')">Одобренные</button>
-                    ${event.allowOrganizerRole ? `<button class="btn-export-word"  onclick="exportToWord('${eventId}','organizer')">Организаторы</button>` : ''}
+                    <button class="btn-export-word"  onclick="exportToWord('${eventId}','одобрено')">Одобренные</button>
+                    ${event.allowOrganizerRole ? `<button class="btn-export-word"  onclick="exportToWord('${eventId}','организатор')">Организаторы</button>` : ''}
                 </div>
             </div>
         </div>
@@ -449,16 +449,16 @@ function renderEventApplicants(container, eventId) {
                            color:${currentRoleFilter==='all'?'#fff':'#064591'};">
                 Все
             </button>
-            <button onclick="filterApplicantsByRole('participant')"
+            <button onclick="filterApplicantsByRole('участник')"
                     style="padding:7px 18px;border-radius:20px;border:2px solid #10b981;font-size:14px;font-weight:600;cursor:pointer;
-                           background:${currentRoleFilter==='participant'?'#10b981':'#fff'};
-                           color:${currentRoleFilter==='participant'?'#fff':'#10b981'};">
+                           background:${currentRoleFilter==='участник'?'#10b981':'#fff'};
+                           color:${currentRoleFilter==='участник'?'#fff':'#10b981'};">
                 Участники
             </button>
-            <button onclick="filterApplicantsByRole('organizer')"
+            <button onclick="filterApplicantsByRole('организатор')"
                     style="padding:7px 18px;border-radius:20px;border:2px solid #d97706;font-size:14px;font-weight:600;cursor:pointer;
-                           background:${currentRoleFilter==='organizer'?'#d97706':'#fff'};
-                           color:${currentRoleFilter==='organizer'?'#fff':'#d97706'};">
+                           background:${currentRoleFilter==='организатор'?'#d97706':'#fff'};
+                           color:${currentRoleFilter==='организатор'?'#fff':'#d97706'};">
                 Организаторы
             </button>
         </div>` : ''}`;
@@ -496,10 +496,10 @@ function renderEventApplicants(container, eventId) {
         const u = users[app.username] || {};
 
         const statusMap = {
-            approved: ['badge-approved', 'Одобрено'],
-            rejected: ['badge-rejected', 'Отклонено'],
-            pending:  ['badge-pending',  'Ожидает'],
-            reserve:  ['badge-reserve',  'Резерв'],
+            одобрено:  ['badge-approved', 'Одобрено'],
+            отклонено: ['badge-rejected', 'Отклонено'],
+            ожидание:  ['badge-pending',  'Ожидает'],
+            резерв:    ['badge-reserve',  'Резерв'],
         };
         const [badgeClass, statusLabel] = statusMap[app.status] || ['badge-pending', 'Ожидает'];
 
@@ -539,13 +539,13 @@ function renderEventApplicants(container, eventId) {
 
         // Кнопки действий
         const actions = [];
-        if (app.status !== 'approved') {
+        if (app.status !== 'одобрено') {
             actions.push(`<button class="btn-approve" onclick="approveApplication('${app.id}')">Одобрить</button>`);
         }
-        if (app.status !== 'reserve') {
+        if (app.status !== 'резерв') {
             actions.push(`<button class="btn-reserve" onclick="setReserveApplication('${app.id}')">Резерв</button>`);
         }
-        if (app.status !== 'rejected') {
+        if (app.status !== 'отклонено') {
             actions.push(`<button class="btn-reject" onclick="rejectApplication('${app.id}')">Отклонить</button>`);
         }
 
@@ -560,7 +560,7 @@ function renderEventApplicants(container, eventId) {
                 <td>${escapeHTML(u.phone || '—')}</td>
                 <td>${escapeHTML(app.date || '—')}</td>
                 <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
-                ${event.allowOrganizerRole ? `<td>${app.applicationRole === 'organizer' ? '<span class="status-badge badge-reserve">Организатор</span>' : '<span class="status-badge badge-approved">Участник</span>'}</td>` : ''}
+                ${event.allowOrganizerRole ? `<td>${app.applicationRole === 'организатор' ? '<span class="status-badge badge-reserve">Организатор</span>' : '<span class="status-badge badge-approved">Участник</span>'}</td>` : ''}
                 ${tdTextFields}
                 ${tdFiles}
                 <td>
@@ -593,7 +593,7 @@ async function approveApplication(appId) {
     const events = getEventsFromStorage() || DEFAULT_EVENTS;
     const event  = events.find(e => e.id === app.eventId);
 
-    app.status = 'approved';
+    app.status = 'одобрено';
     saveApplications(apps);
 
     addUserNotification(app.username, {
@@ -617,7 +617,7 @@ async function setReserveApplication(appId) {
     const app  = apps.find(a => a.id === appId);
     if (!app) return;
 
-    app.status = 'reserve';
+    app.status = 'резерв';
     saveApplications(apps);
 
     renderAdminPanel(currentAdminTab);
@@ -640,7 +640,7 @@ async function rejectApplication(appId) {
     const events = getEventsFromStorage() || DEFAULT_EVENTS;
     const event  = events.find(e => e.id === app.eventId);
 
-    app.status = 'rejected';
+    app.status = 'отклонено';
     saveApplications(apps);
 
     const users = getUsers();
