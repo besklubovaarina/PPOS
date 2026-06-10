@@ -1009,7 +1009,7 @@ async function addEvent() {
         // Режим добавления — сначала сохраняем на сервере, получаем ID
         const serverResult = await apiCreateEvent({
             title, description: desc, date, time, type, location,
-            maxParticipants: max, status: 'open', allowOrganizerRole,
+            maxParticipants: max, status: 'открыто', allowOrganizerRole,
             requiresForm: needsForm,
             formFields: JSON.stringify(formFields),
             certParticipantData: _certImgData.participant || undefined,
@@ -1028,7 +1028,7 @@ async function addEvent() {
             reserveCount:    0,
             requiresForm:    needsForm,
             formFields,
-            status:          'open',
+            status:          'открыто',
             hasCertificate,
             allowOrganizerRole,
             attachments:     adminEventAttachments.map(f => ({ ...f })),
