@@ -16,6 +16,8 @@ router.get('/', async (req, res) => {
                     м."Название" as event_title,
                     м."Дата" as event_date,
                     ст."ФИО" as full_name,
+                    ст."Телефон" as phone,
+                    ст."email" as email,
                     г."Номер" as group_number,
                     д."Логин" as username
              FROM ${TABLE} с
@@ -38,6 +40,8 @@ router.get('/event/:id', async (req, res) => {
         const result = await pool.query(
             `SELECT с.id, с."Статус", с."Роль_участника", с."Дата",
                     ст."ФИО" as full_name,
+                    ст."Телефон" as phone,
+                    ст."email" as email,
                     г."Номер" as group_number,
                     д."Логин" as username
              FROM ${TABLE} с

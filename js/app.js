@@ -83,6 +83,8 @@ async function _prefetchFromServer() {
             answers:         {},
             applicationRole: a['Роль_участника'] || 'участник',
             groupNumber:     a.group_number      || '',
+            phone:           a.phone             || '',
+            email:           a.email             || '',
         }));
         saveApplications(apps);
 
