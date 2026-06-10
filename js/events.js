@@ -145,7 +145,7 @@ function getEventIconHTML(type, eventId) {
  * @param {string} eventId
  */
 function getParticipantsCount(eventId) {
-    return getApplications().filter(a => a.eventId === eventId && a.status === 'approved').length;
+    return getApplications().filter(a => a.eventId === eventId && a.status === 'одобрено').length;
 }
 
 /**
@@ -153,7 +153,7 @@ function getParticipantsCount(eventId) {
  * @param {string} eventId
  */
 function getPendingCount(eventId) {
-    return getApplications().filter(a => a.eventId === eventId && (a.status === 'pending' || a.status === 'reserve')).length;
+    return getApplications().filter(a => a.eventId === eventId && (a.status === 'ожидание' || a.status === 'резерв')).length;
 }
 
 /**
@@ -437,7 +437,7 @@ function openRegistrationModal(eventId) {
     const roleBlock = document.getElementById('reg-role-block');
     if (roleBlock) {
         roleBlock.style.display = event.allowOrganizerRole ? 'block' : 'none';
-        const participantRadio = document.querySelector('input[name="reg-role"][value="participant"]');
+        const participantRadio = document.querySelector('input[name="reg-role"][value="участник"]');
         if (participantRadio) participantRadio.checked = true;
     }
 
@@ -579,7 +579,7 @@ function submitRegistration() {
     }
 
     // Собираем выбранную роль
-    const appRole = document.querySelector('input[name="reg-role"]:checked')?.value || 'participant';
+    const appRole = document.querySelector('input[name="reg-role"]:checked')?.value || 'участник';
 
     // Читаем файлы, затем финализируем
     Promise.all(fileReads).then(() => {
@@ -645,7 +645,7 @@ function _showRegErrors(errors) {
 }
 
 /** Сохраняет заявку и закрывает модал. Вызывается после чтения файлов. */
-async function _finalizeRegistration(eventId, user, answers, event, appRole = 'participant') {
+async function _finalizeRegistration(eventId, user, answers, event, appRole = 'участник') {
     // Повторная проверка лимита (за время читатели FileReader могли успеть)
     const count = getParticipantsCount(eventId);
     const max   = event.maxParticipants || 0;
@@ -695,7 +695,7 @@ async function _finalizeRegistration(eventId, user, answers, event, appRole = 'p
         eventId,
         date:            new Date().toLocaleDateString('ru-RU'),
         timestamp:       new Date().toISOString(),
-        status:          'pending',
+        status:          'ожидание',
         consentGiven:    true,
         answers,
         applicationRole: appRole,
@@ -1239,7 +1239,7 @@ function renderMyEventsSection() {
     const apps = getApplications();
     container.innerHTML = myEvents.map(e => {
         const myApp = apps.find(a => a.eventId === e.id && a.username === user.username);
-        const canSeeCert = e.hasCertificate && e.status === 'завершено' && myApp?.status === 'approved';
+        const canSeeCert = e.hasCertificate && e.status === 'завершено' && myApp?.status === 'одобрено';
         return buildEventCardHTML(e, canSeeCert);
     }).join('');
 }
@@ -1375,12 +1375,12 @@ async function showCertificate(eventId) {
 
     const apps  = getApplications();
     const myApp = apps.find(a => a.eventId === eventId && a.username === user.username);
-    if (!myApp || myApp.status !== 'approved') {
+    if (!myApp || myApp.status !== 'одобрено') {
         showNotification('Сертификат доступен только участникам с одобренной заявкой', 'warning');
         return;
     }
 
-    const isOrganizer = myApp.applicationRole === 'organizer';
+    const isOrganizer = myApp.applicationRole === 'организатор';
 
     // Сначала пробуем localStorage (оба варианта ключа), затем API
     let certImage = isOrganizer

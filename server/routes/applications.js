@@ -91,8 +91,8 @@ router.post('/', async (req, res) => {
 
         const result = await pool.query(
             `INSERT INTO ${TABLE} ("id_Мероприятие","id_Студент","Роль_участника","Статус")
-             VALUES ($1,$2,$3,'pending') RETURNING id`,
-            [eventId, studentId, role || 'participant']
+             VALUES ($1,$2,$3,'ожидание') RETURNING id`,
+            [eventId, studentId, role || 'участник']
         );
 
         res.json({ success: true, id: result.rows[0].id });
@@ -106,9 +106,10 @@ router.post('/', async (req, res) => {
 router.put('/:id/approve', async (req, res) => {
     try {
         const r = await pool.query(
-            `UPDATE ${TABLE} SET "Статус"='approved' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
+            `UPDATE ${TABLE} SET "Статус"='одобрено' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
+        if (!r.rows.length) return res.json({ success: false, error: 'Заявка не найдена' });
         const { id_Студент, id_Мероприятие } = r.rows[0];
 
         await pool.query(
@@ -129,9 +130,10 @@ router.put('/:id/approve', async (req, res) => {
 router.put('/:id/reject', async (req, res) => {
     try {
         const r = await pool.query(
-            `UPDATE ${TABLE} SET "Статус"='rejected' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
+            `UPDATE ${TABLE} SET "Статус"='отклонено' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
+        if (!r.rows.length) return res.json({ success: false, error: 'Заявка не найдена' });
         const { id_Студент, id_Мероприятие } = r.rows[0];
 
         await pool.query(
@@ -152,9 +154,10 @@ router.put('/:id/reject', async (req, res) => {
 router.put('/:id/reserve', async (req, res) => {
     try {
         const r = await pool.query(
-            `UPDATE ${TABLE} SET "Статус"='reserve' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
+            `UPDATE ${TABLE} SET "Статус"='резерв' WHERE id=$1 RETURNING "id_Студент","id_Мероприятие"`,
             [req.params.id]
         );
+        if (!r.rows.length) return res.json({ success: false, error: 'Заявка не найдена' });
         const { id_Студент, id_Мероприятие } = r.rows[0];
 
         await pool.query(
