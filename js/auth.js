@@ -59,7 +59,7 @@ async function handleLogin() {
             const appResult = await apiGetApplications(u.studentId);
             if (appResult.success && appResult.applications) {
                 sessionUser.enrolledEvents = appResult.applications
-                    .filter(a => a['Статус'] !== 'rejected')
+                    .filter(a => a['Статус'] !== 'отклонено')
                     .map(a => String(a.event_id));
             }
         }

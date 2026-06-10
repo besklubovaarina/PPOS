@@ -67,6 +67,8 @@ router.put('/:username', async (req, res) => {
              WHERE с.id=$1`,
             [studentId]
         );
+        if (!updated.rows.length)
+            return res.json({ success: false, error: 'Пользователь не найден' });
         const u = updated.rows[0];
 
         res.json({

@@ -78,10 +78,10 @@ async function _prefetchFromServer() {
             eventId:         String(a.event_id),
             date:            a['Дата'] ? new Date(a['Дата']).toLocaleDateString('ru-RU') : '',
             timestamp:       a['Дата'] || '',
-            status:          a['Статус']         || 'pending',
+            status:          a['Статус']         || 'ожидание',
             consentGiven:    true,
             answers:         {},
-            applicationRole: a['Роль_участника'] || 'participant',
+            applicationRole: a['Роль_участника'] || 'участник',
             groupNumber:     a.group_number      || '',
         }));
         saveApplications(apps);
