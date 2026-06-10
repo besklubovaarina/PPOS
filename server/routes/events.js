@@ -104,6 +104,9 @@ router.put('/:id', async (req, res) => {
                 requiresForm, formFields,
                 certParticipantData, certOrganizerData } = req.body;
 
+        const safeDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+        const safeTime = time && /^\d{2}:\d{2}/.test(time) ? time : null;
+
         await pool.query(
             `UPDATE "Мероприятие" SET
              "Название"=$1,"Описание"=$2,"Дата"=$3,"Время"=$4,"Тип"=$5,
@@ -111,7 +114,7 @@ router.put('/:id', async (req, res) => {
              "Разрешить_организатора"=$9,"Изображение"=$10,
              "Требует_форму"=$11,"Поля_формы"=$12
              WHERE id=$13`,
-            [title, description, date || null, time || null, type, location,
+            [title, description, safeDate, safeTime, type, location,
              maxParticipants, status, allowOrganizerRole,
              imageUrl || null,
              requiresForm || false,
