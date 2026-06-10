@@ -53,7 +53,7 @@ router.put('/:username', async (req, res) => {
              "id_Группа"=$7, "id_Улица"=$8, "Спецификация_адреса"=$9
              WHERE id=$10`,
             [fullName, phone, email, avatarData || null,
-             gender || null, birthDate || null,
+             gender || null, birthDate && /^\d{4}-\d{2}-\d{2}$/.test(birthDate) ? birthDate : null,
              groupId, streetId || null, addressSpec || null, studentId]
         );
 
