@@ -3,6 +3,7 @@
  */
 
 let currentAdminTab          = 'changes';
+let _pendingChangesCache     = {};
 let currentApplicantsEventId = null;
 let currentRoleFilter        = 'all'; // 'all' | 'participant' | 'organizer'
 
@@ -77,7 +78,9 @@ async function renderAdminChanges(container) {
     html += '<div class="pending-block">';
     html += '<h4>Требуют вашего решения</h4>';
 
+    _pendingChangesCache = {};
     pending.map(normalize).forEach(change => {
+        _pendingChangesCache[change.id] = change;
         const rows = [];
         if (change.oldFullName !== change.newFullName)
             rows.push(`ФИО: <em>${escapeHTML(change.oldFullName)}</em> → <strong>${escapeHTML(change.newFullName)}</strong>`);
@@ -119,7 +122,16 @@ async function renderAdminChanges(container) {
 }
 
 async function approveChange(changeId) {
-    await apiResolvePendingChange(changeId, 'approve');
+    const result = await apiResolvePendingChange(changeId, 'approve');
+    if (!result.success && result.error !== 'Нет соединения с сервером') {
+        showNotification('Ошибка: ' + (result.error || 'не удалось одобрить'), 'error');
+        return;
+    }
+
+    // Обновляем localStorage, чтобы новый телефон/email сразу отражался в списках
+    const change = _pendingChangesCache[changeId];
+    if (change) applyProfileChange(change);
+
     renderAdminPanel(currentAdminTab);
     showNotification('Изменения одобрены', 'success');
 }
@@ -556,8 +568,8 @@ function renderEventApplicants(container, eventId) {
                     <strong>${escapeHTML(app.fullName || u.fullName || app.username)}</strong>
                     ${app.username ? `<br><span style="font-size:12px;color:#6b7280;">${escapeHTML(app.username)}</span>` : ''}
                 </td>
-                <td>${escapeHTML(u.groupNumber || '—')}</td>
-                <td>${escapeHTML(u.phone || '—')}</td>
+                <td>${escapeHTML(app.groupNumber || u.groupNumber || '—')}</td>
+                <td>${escapeHTML(app.phone || u.phone || '—')}</td>
                 <td>${escapeHTML(app.date || '—')}</td>
                 <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
                 ${event.allowOrganizerRole ? `<td>${app.applicationRole === 'организатор' ? '<span class="status-badge badge-reserve">Организатор</span>' : '<span class="status-badge badge-approved">Участник</span>'}</td>` : ''}
