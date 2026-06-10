@@ -211,7 +211,7 @@ router.get('/pending-changes', async (req, res) => {
              FROM "Ожидающие_изменения_профиля" оп
              JOIN "Студент" с ON оп."id_Студент"=с.id
              JOIN "Данные_входа" д ON с."id_Данные_входа"=д.id
-             WHERE оп."Статус"='pending'
+             WHERE оп."Статус"='ожидание'
              ORDER BY оп."Дата_создания" DESC`
         );
         res.json({ success: true, changes: r.rows });
@@ -266,7 +266,7 @@ router.put('/pending-changes/:id/:action', async (req, res) => {
 
         await pool.query(
             'UPDATE "Ожидающие_изменения_профиля" SET "Статус"=$1 WHERE id=$2',
-            [action === 'approve' ? 'approved' : 'rejected', id]
+            [action === 'approve' ? 'одобрено' : 'отклонено', id]
         );
         res.json({ success: true });
     } catch (err) { res.json({ success: false, error: 'Ошибка сервера' }); }
