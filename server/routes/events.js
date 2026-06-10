@@ -53,6 +53,9 @@ router.post('/', async (req, res) => {
                 requiresForm, formFields,
                 certParticipantData, certOrganizerData } = req.body;
 
+        const safeDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+        const safeTime = time && /^\d{2}:\d{2}/.test(time) ? time : null;
+
         const result = await pool.query(
             `INSERT INTO "Мероприятие"
              ("Название","Описание","Дата","Время","Тип","Место",
@@ -60,7 +63,7 @@ router.post('/', async (req, res) => {
               "Требует_форму","Поля_формы")
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
              RETURNING id`,
-            [title, description, date || null, time || null, type, location,
+            [title, description, safeDate, safeTime, type, location,
              maxParticipants || 0, status || 'открыто',
              allowOrganizerRole || false, imageUrl || null,
              requiresForm || false,
