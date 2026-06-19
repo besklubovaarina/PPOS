@@ -119,10 +119,10 @@ function handleLogout() {
     if (currentUser && !currentUser.isAdmin) {
         // Сохраняем актуальный список записанных мероприятий обратно в базу
         const users = getUsers();
-        if (users[currentUser.username]) {
-            users[currentUser.username].enrolledEvents = currentUser.enrolledEvents || [];
-            saveUsers(users);
-        }
+        if (!users[currentUser.username]) users[currentUser.username] = {};
+        users[currentUser.username].enrolledEvents = currentUser.enrolledEvents || [];
+        users[currentUser.username].reminders      = currentUser.reminders      || [];
+        saveUsers(users);
     }
 
     setCurrentUser(null);

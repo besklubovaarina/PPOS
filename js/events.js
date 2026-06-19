@@ -705,11 +705,10 @@ async function _finalizeRegistration(eventId, user, answers, event, appRole = 'p
     // Обновляем сессию и хранилище пользователей
     setCurrentUser(user);
     const users = getUsers();
-    if (users[user.username]) {
-        users[user.username].enrolledEvents = user.enrolledEvents;
-        if (user.reminders !== undefined) users[user.username].reminders = user.reminders;
-        saveUsers(users);
-    }
+    if (!users[user.username]) users[user.username] = {};
+    users[user.username].enrolledEvents = user.enrolledEvents;
+    if (user.reminders !== undefined) users[user.username].reminders = user.reminders;
+    saveUsers(users);
 
     closeRegistrationModal();
     renderAllEvents();
@@ -739,10 +738,9 @@ async function cancelEnroll(eventId) {
 
     setCurrentUser(user);
     const users = getUsers();
-    if (users[user.username]) {
-        users[user.username].enrolledEvents = user.enrolledEvents;
-        saveUsers(users);
-    }
+    if (!users[user.username]) users[user.username] = {};
+    users[user.username].enrolledEvents = user.enrolledEvents;
+    saveUsers(users);
 
     renderAllEvents();
     showNotification('Запись отменена', 'warning');
@@ -774,10 +772,9 @@ function toggleReminder(eventId) {
 
     setCurrentUser(user);
     const users = getUsers();
-    if (users[user.username]) {
-        users[user.username].reminders = user.reminders;
-        saveUsers(users);
-    }
+    if (!users[user.username]) users[user.username] = {};
+    users[user.username].reminders = user.reminders;
+    saveUsers(users);
 
     renderAllEvents();
 }

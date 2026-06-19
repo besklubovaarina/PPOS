@@ -426,7 +426,9 @@ function uploadDocument(type, event) {
             user.documents[type] = { name: file.name, id };
             setCurrentUser(user);
             const users = getUsers();
-            if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
+            if (!users[user.username]) users[user.username] = {};
+            users[user.username].documents = user.documents;
+            saveUsers(users);
             renderDocumentPane();
             showNotification('Документ загружен', 'success');
         }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
@@ -456,7 +458,9 @@ function uploadExtraDoc(event) {
             user.documents.extraFiles.push({ name: file.name, id });
             setCurrentUser(user);
             const users = getUsers();
-            if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
+            if (!users[user.username]) users[user.username] = {};
+            users[user.username].documents = user.documents;
+            saveUsers(users);
             renderDocumentPane();
             showNotification('Документ загружен', 'success');
         }).catch(() => showNotification('Ошибка при сохранении файла', 'error'));
@@ -473,7 +477,9 @@ function removeExtraDoc(index) {
 
     setCurrentUser(user);
     const users = getUsers();
-    if (users[user.username]) { users[user.username].documents = user.documents; saveUsers(users); }
+    if (!users[user.username]) users[user.username] = {};
+    users[user.username].documents = user.documents;
+    saveUsers(users);
     renderDocumentPane();
 }
 
