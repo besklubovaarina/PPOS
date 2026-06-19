@@ -175,8 +175,6 @@ CREATE TABLE Протокол_собрания (
     Повестка_собрания TEXT,
     Число_присутствующих INT,
     Результаты_голосования TEXT,
-    Файл_название VARCHAR(255),
-    Файл TEXT,
     Дата_загрузки TIMESTAMP DEFAULT NOW(),
     id_Аудитория INT,
     FOREIGN KEY(id_Аудитория) REFERENCES Аудитория(id)
