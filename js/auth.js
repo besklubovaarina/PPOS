@@ -38,6 +38,8 @@ async function handleLogin() {
 
     if (result.success && result.user) {
         const u = result.user;
+        const localUsers = getUsers();
+        const localUser  = localUsers[u.username];
         sessionUser = {
             username:       u.username,
             isAdmin:        u.isAdmin || false,
@@ -49,7 +51,7 @@ async function handleLogin() {
             email:          u.email || '',
             avatarDataUrl:  u.avatarDataUrl || '',
             enrolledEvents: [],
-            reminders:      [],
+            reminders:      (localUser && localUser.reminders) || [],
             documents:      {},
             studentId:      u.studentId,
         };
