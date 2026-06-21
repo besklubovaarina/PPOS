@@ -47,6 +47,7 @@ router.get('/', async (req, res) => {
 
 // Создать мероприятие
 router.post('/', async (req, res) => {
+    console.log('CREATE EVENT BODY:', JSON.stringify(req.body));
     try {
         const { title, description, date, time, type, location,
                 maxParticipants, status, allowOrganizerRole, imageUrl,
